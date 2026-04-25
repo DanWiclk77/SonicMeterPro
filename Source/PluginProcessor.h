@@ -10,6 +10,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 #include <juce_core/juce_core.h>
+#include <juce_dsp/juce_dsp.h>
 #include <vector>
 #include <cmath>
 #include <algorithm>
@@ -120,11 +121,17 @@ private:
     int fifoIndex = 0;
     bool nextFFTBlockReady = false;
 
+    float gainFactor = 1.0f;
+    float gainDb = 0.0f;
+    float vuCalibration = -12.0f;
+    StreamingPreset currentPreset = Spotify;
+
     float smoothingAlpha = 0.008f; 
     
     // LRA Statistics
     std::vector<float> lraHistory;
     const int maxLraPoints = 2000; // ~20 seconds of data for stats
+    double integratedSum = 0.0;
     long long integratedCount = 0;
 
     void updateLoudness (const juce::AudioBuffer<float>& buffer);

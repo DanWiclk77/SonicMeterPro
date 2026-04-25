@@ -55,4 +55,5 @@ target_link_libraries(SonicMeterPro
         juce::juce_graphics
         juce::juce_gui_basics
         juce::juce_gui_extra
+        juce::juce_dsp
         juce::juce_core)

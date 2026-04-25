@@ -9,7 +9,7 @@
 
 SonicMeterAudioProcessor::SonicMeterAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
-     : AudioProcessor (BusesProperties()
+     : juce::AudioProcessor (BusesProperties()
                      #if ! JucePlugin_IsMidiEffect
                       #if ! JucePlugin_IsSynth
                        .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
@@ -45,8 +45,8 @@ void SonicMeterAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
 {
     juce::ScopedNoDenormals noDenormals;
     const int numSamples = buffer.getNumSamples();
-    const int numInputs = getTotalNumInputChannels();
-    const int numOutputs = getTotalNumOutputChannels();
+    const int numInputs = this->getTotalNumInputChannels();
+    const int numOutputs = this->getTotalNumOutputChannels();
 
     for (int i = numInputs; i < numOutputs; ++i)
         buffer.clear (i, 0, numSamples);
