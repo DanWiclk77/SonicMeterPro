@@ -89,7 +89,7 @@ private:
     long long integratedCount = 0;
 
     void updateLoudness (const juce::AudioBuffer<float>& buffer);
-    float linearToDb(float linear) { return linear > 0.00001f ? 20.0f * std::log10(linear) : -100.0f; }
+    float linearToDb(float linear) { return linear > 0.00001f ? 20.0f * std::log10f(linear) : -100.0f; }
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SonicMeterAudioProcessor)
 };

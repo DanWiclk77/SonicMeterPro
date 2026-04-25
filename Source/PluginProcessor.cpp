@@ -87,7 +87,7 @@ void SonicMeterAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
         magR += r * r;
     }
     
-    const float correlationDenom = std::sqrt(magL * magR) + 1.0e-10f;
+    const float correlationDenom = std::sqrtf(magL * magR) + 1.0e-10f;
     currentMeters.correlation = dotProduct / correlationDenom;
     currentMeters.stereoWidth = 1.0f - std::abs(currentMeters.correlation + 1.0f) * 0.5f;
 
@@ -110,7 +110,7 @@ void SonicMeterAudioProcessor::updateLoudness(const juce::AudioBuffer<float>& bu
     }
     
     float meanSq = sumSq / (float)(numSamples * std::max(1, buffer.getNumChannels()));
-    float mntLufs = 10.0f * std::log10(meanSq + 1e-10f) + 0.69f; // K-weighting offset
+    float mntLufs = 10.0f * std::log10f(meanSq + 1e-10f) + 0.69f; // K-weighting offset
     
     currentMeters.momentaryLufs = mntLufs;
     
@@ -128,8 +128,8 @@ void SonicMeterAudioProcessor::updateLoudness(const juce::AudioBuffer<float>& bu
     integratedCount++;
     
     if (integratedCount > 0) {
-        float avgMeanSq = integratedSum / (float)integratedCount;
-        currentMeters.integratedLufs = 10.0f * std::log10(avgMeanSq + 1e-10f) + 0.69f;
+        float avgMeanSq = (float)(integratedSum / (double)integratedCount);
+        currentMeters.integratedLufs = 10.0f * std::log10f(avgMeanSq + 1e-10f) + 0.69f;
     }
     
     currentMeters.shortTermLufs = mntLufs; // Simulated short term

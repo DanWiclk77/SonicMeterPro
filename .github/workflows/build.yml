@@ -59,11 +59,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: SonicMeterPro-Win
-          path: build/SonicMeterPro_artefacts/Release/VST3/SonicMeter Pro.vst3
+          path: "build/SonicMeterPro_artefacts/Release/VST3/SonicMeter Pro.vst3"
 
       - name: Upload Artifacts (macOS)
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
         with:
           name: SonicMeterPro-Mac
-          path: build/SonicMeterPro_artefacts/Release/VST3/SonicMeter Pro.vst3
+          path: "build/SonicMeterPro_artefacts/Release/VST3/SonicMeter Pro.vst3"

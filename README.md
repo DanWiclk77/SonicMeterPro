@@ -3,6 +3,11 @@
 Professional Loudness and Stereo Field Metering Plugin.
 Built with JUCE and C++.
 
+## Versión 1.7.1 "Silicon Resilience"
+- **Correcciones de Ambigüedad (Clang/ARM):** Implementación de funciones matemáticas explícitas (`log10f`, `sqrtf`) para asegurar compilación exitosa en Apple Silicon.
+- **Robustez de CI/CD:** Corregidas las rutas de artefactos con espacios y asegurado el entorno a Node 24 sin advertencias.
+- **Sincronización Web-Plugin:** Alineada la lógica de medición del preview de React con el motor C++ para una experiencia idéntica.
+
 ## Versión 1.7.0 "Vanguard Professional"
 - **Rediseño de Interfaz:** Nuevo layout bento-grid con panel de control de ganancia integrado y visualización técnica mejorada.
 - **Gain Staging Pro:** Añadido control de ganancia de entrada para calibración precisa antes de la medición.
