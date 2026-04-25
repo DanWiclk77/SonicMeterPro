@@ -5,7 +5,7 @@ Built with JUCE and C++.
 
 ## Versión 1.6.2 "Precision Core"
 - **Correcciones Críticas (MSVC):** Eliminación de ambigüedades en tipos `auto` y `juce::Point` para asegurar la compilación en Windows.
-- **Entorno de Compilación:** Actualizado a **Java 25** y **Node.js 24+ (latest)** en GitHub Actions para máxima estabilidad.
+- **Entorno de Compilación:** Actualizado a **Java 25** y **Node.js 24** en GitHub Actions para asegurar compatibilidad y evitar avisos de deprecación.
 - **Renderizado de Fuente:** Asegurada la compatibilidad de `drawText` con rectángulos flotantes.
 - **Ajuste de Escala VU:** Calibración refinada del arco de medición y etiquetas.
 - **Estabilidad de Compilación:** Refinamiento de la lógica de punteros de audio para evitar errores de conversión en Mac.
