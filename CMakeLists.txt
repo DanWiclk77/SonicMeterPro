@@ -25,7 +25,23 @@ juce_add_plugin(SonicMeterPro
     FORMATS VST3 AU Standalone
     PRODUCT_NAME "SonicMeter Pro")
 
-# 3. Add Source files
+# 3. Fix Xcode build phases to avoid unnecessary re-runs
+# This resolves the "Run script build phase will be run during every build" warnings
+if(APPLE)
+    # Configure CMake to generate proper Xcode schemes with dependency analysis
+    set_property(GLOBAL PROPERTY XCODE_EMIT_EFFECTIVE_PLATFORM_NAME ON)
+    
+    # Set dependency file build phase for all targets
+    foreach(target SonicMeterPro_VST3 SonicMeterPro_AU SonicMeterPro_Standalone)
+        if(TARGET ${target})
+            set_target_properties(${target} PROPERTIES
+                XCODE_DEPENDENCY_FILE_BUILD_PHASE ON
+            )
+        endif()
+    endforeach()
+endif()
+
+# 4. Add Source files
 target_sources(SonicMeterPro
     PRIVATE
         Source/PluginProcessor.cpp
@@ -33,7 +49,7 @@ target_sources(SonicMeterPro
         Source/PluginEditor.cpp
         Source/PluginEditor.h)
 
-# 4. Links and includes
+# 5. Links and includes
 target_compile_definitions(SonicMeterPro
     PUBLIC
         JUCE_WEB_BROWSER=0
