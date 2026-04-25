@@ -61,7 +61,7 @@ jobs:
 
       - name: Build (macOS)
         if: runner.os == 'macOS'
-        run: cmake --build build --config Release --parallel 4
+        run: cmake --build build --config Release --parallel 4 --verbose
 
       - name: Upload Artifacts (Windows)
         if: runner.os == 'Windows'

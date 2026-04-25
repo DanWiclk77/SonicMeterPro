@@ -2,6 +2,8 @@
     SonicMeter Pro - Platinum UI Edition
     Precision Engineered for ARM64 (macOS) and high-performance x64.
 */
+#include <cmath>
+#include <algorithm>
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 

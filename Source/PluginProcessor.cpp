@@ -2,6 +2,8 @@
     SonicMeter Pro - Platinum DSP Core
     Precision Loudness Analysis optimized for ARM64 and x64.
 */
+#include <cmath>
+#include <algorithm>
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 

@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.15)
 
+# Set global architectures for macOS before any targets are created
+if (APPLE)
+    set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "macOS Architectures")
+endif()
+
 project(SonicMeterPro VERSION 1.8.1)
 
 # 1. Download JUCE and include it
@@ -24,12 +29,6 @@ juce_add_plugin(SonicMeterPro
     PLUGIN_CODE Snmt
     FORMATS VST3 AU Standalone
     PRODUCT_NAME "SonicMeter Pro")
-
-if (APPLE)
-    set_target_properties(SonicMeterPro PROPERTIES 
-        OSX_ARCHITECTURES "arm64;x86_64"
-    )
-endif()
 
 # 3. Add Source files
 target_sources(SonicMeterPro
