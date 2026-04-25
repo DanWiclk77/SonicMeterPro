@@ -1,6 +1,11 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.22)
 
 project(SonicMeterPro VERSION 1.8.0)
+
+if (APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "")
+    set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "")
+endif()
 
 # 1. Download JUCE and include it
 include(FetchContent)
