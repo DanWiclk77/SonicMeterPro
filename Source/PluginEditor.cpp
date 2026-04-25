@@ -43,11 +43,6 @@ void SonicMeterAudioProcessorEditor::paint (juce::Graphics& g)
     // VU Meter at top
     drawVUMeter(g, leftSection.removeFromTop(200.0f).reduced(5), meters.vuValue);
     
-    // Gain control below VU
-    auto gainArea = leftSection.reduced(30, 20);
-    gainLabel.setBounds(gainArea.removeFromTop(20).toNearestInt());
-    gainSlider.setBounds(gainArea.toNearestInt());
-    
     // Divider
     g.setColour(juce::Colours::white.withAlpha(0.1f));
     g.drawVerticalLine(bounds.getX() - 5, bounds.getY() + 10, bounds.getBottom() - 10);
@@ -59,7 +54,7 @@ void SonicMeterAudioProcessorEditor::paint (juce::Graphics& g)
     
     auto headerArea = centerSection.removeFromTop(40);
     g.setColour(juce::Colours::white.withAlpha(0.8f));
-    g.setFont(juce::Font("monospace", 18.0f, juce::Font::bold));
+    g.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 18.0f, juce::Font::bold));
     g.drawText("LOUDNESS ANALYSIS", headerArea, juce::Justification::centred);
     
     drawHistoryGraph(g, centerSection.removeFromTop(140).reduced(10), meters.history, meters.historyIdx);
@@ -129,8 +124,8 @@ void SonicMeterAudioProcessorEditor::drawDigitalMeter(juce::Graphics& g, juce::R
     g.drawText(label, area.removeFromTop(15), juce::Justification::left);
     
     g.setColour(color);
-    g.setFont(juce::Font("monospace", 30.0f, juce::Font::bold));
-    juce::String valStr = value <= -70.0f ? "-inf" : juce::String(value, 1);
+    g.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 30.0f, juce::Font::bold));
+    juce::String valStr = (value <= -70.0f) ? juce::String("-inf") : juce::String(value, 1);
     g.drawText(valStr, area, juce::Justification::centredLeft);
 }
 
@@ -178,7 +173,16 @@ void SonicMeterAudioProcessorEditor::drawVUMeter(juce::Graphics& g, juce::Rectan
     g.fillEllipse(centerX - 8.0f, bottomY - 8.0f, 16.0f, 16.0f);
 }
 
-void SonicMeterAudioProcessorEditor::resized() {}
+void SonicMeterAudioProcessorEditor::resized() 
+{
+    auto bounds = getLocalBounds().toFloat().reduced(10.0f);
+    auto leftSection = bounds.removeFromLeft(220.0f);
+    leftSection.removeFromTop(200.0f); // Skip VU area
+    
+    auto gainArea = leftSection.reduced(30.0f, 20.0f);
+    gainLabel.setBounds(gainArea.removeFromTop(20.0f).toNearestInt());
+    gainSlider.setBounds(gainArea.toNearestInt());
+}
 void SonicMeterAudioProcessorEditor::timerCallback() { repaint(); }
 
 void SonicMeterAudioProcessorEditor::mouseDown (const juce::MouseEvent& e)
