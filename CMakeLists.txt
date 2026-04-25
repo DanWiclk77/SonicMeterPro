@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(SonicMeterPro VERSION 1.7.1)
+project(SonicMeterPro VERSION 1.8.0)
 
 # 1. Download JUCE and include it
 include(FetchContent)

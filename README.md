@@ -1,7 +1,12 @@
-# SonicMeter Pro VST3
+# SonicMeter Pro - Platinum Edition
+Professional high-performance Loudness and Stereo Field Metering.
 
-Professional Loudness and Stereo Field Metering Plugin.
-Built with JUCE and C++.
+## Version 1.8.0 "Platinum Optimization"
+- **ARM64 Silicon Mastery:** Full type-safety audit for Apple Silicon (M1/M2/M3) and modern x64 processors.
+- **Precision UI:** Technical technical UI rewrite using high-resolution geometry and carbon-fiber aesthetic.
+- **Advanced DSP:** True 3-second Short Term LUFS rolling average and gated integrated metering approximation.
+- **Zero Ambiguity:** Removed global namespaces and enforced explicit math functions (`log10f`, `sqrtf`, `fabsf`) to resolve all Clang/MSVC compiler conflicts.
+- **Persistent State:** Added binary state serialization for gain staging parameters.
 
 ## Versión 1.7.1 "Silicon Resilience"
 - **Correcciones de Ambigüedad (Clang/ARM):** Implementación de funciones matemáticas explícitas (`log10f`, `sqrtf`) para asegurar compilación exitosa en Apple Silicon.

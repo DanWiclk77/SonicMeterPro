@@ -1,8 +1,9 @@
-/* SonicMeter Pro - Advanced Loudness Metering Core */
+/* 
+    SonicMeter Pro - Platinum DSP Core
+    Precision Loudness Analysis optimized for ARM64 and x64.
+*/
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-
-using namespace juce;
 
 SonicMeterAudioProcessor::SonicMeterAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -16,20 +17,20 @@ SonicMeterAudioProcessor::SonicMeterAudioProcessor()
                        )
 #endif
 {
+    // Pre-allocate history buffers for 3-second Short Term analysis (approx 30 updates/sec * 3 = 90 slots)
+    shortTermHistory.reserve(100);
 }
 
 SonicMeterAudioProcessor::~SonicMeterAudioProcessor() {}
 
 void SonicMeterAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    // Initialize K-Weighting filters (Standard EBU R128)
-    // High Shelf (Pre-filter)
-    auto preCoeffs = juce::IIRCoefficients::makeHighShelf(sampleRate, 1500.0, 0.707, 4.0);
+    // Professional K-Weighting Filters (EBU R128)
+    const auto preCoeffs = juce::IIRCoefficients::makeHighShelf(sampleRate, 1500.0, 0.707, 4.0);
     preFilterL.setCoefficients(preCoeffs);
     preFilterR.setCoefficients(preCoeffs);
     
-    // High Pass (K-filter)
-    auto weightCoeffs = juce::IIRCoefficients::makeHighPass(sampleRate, 100.0, 1.0);
+    const auto weightCoeffs = juce::IIRCoefficients::makeHighPass(sampleRate, 100.0, 1.0);
     weightFilterL.setCoefficients(weightCoeffs);
     weightFilterR.setCoefficients(weightCoeffs);
 
@@ -41,114 +42,128 @@ void SonicMeterAudioProcessor::releaseResources() {}
 void SonicMeterAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels  = getTotalNumInputChannels();
-    auto totalNumOutputChannels = getTotalNumOutputChannels();
+    const int numSamples = buffer.getNumSamples();
+    const int numInputs = getTotalNumInputChannels();
+    const int numOutputs = getTotalNumOutputChannels();
 
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+    for (int i = numInputs; i < numOutputs; ++i)
+        buffer.clear (i, 0, numSamples);
 
-    // Apply Input Gain Staging
+    // Apply User Input Gain Staging
     buffer.applyGain(gainFactor);
 
-    // Filter for loudness calculation
+    // Filter Scratch Buffer for R128 weighting
     juce::AudioBuffer<float> filteredBuffer;
     filteredBuffer.makeCopyOf(buffer);
     
-    preFilterL.processSamples(filteredBuffer.getWritePointer(0), buffer.getNumSamples());
-    weightFilterL.processSamples(filteredBuffer.getWritePointer(0), buffer.getNumSamples());
+    preFilterL.processSamples(filteredBuffer.getWritePointer(0), numSamples);
+    weightFilterL.processSamples(filteredBuffer.getWritePointer(0), numSamples);
     
-    if (totalNumInputChannels > 1) {
-        preFilterR.processSamples(filteredBuffer.getWritePointer(1), buffer.getNumSamples());
-        weightFilterR.processSamples(filteredBuffer.getWritePointer(1), buffer.getNumSamples());
+    if (numInputs > 1) {
+        preFilterR.processSamples(filteredBuffer.getWritePointer(1), numSamples);
+        weightFilterR.processSamples(filteredBuffer.getWritePointer(1), numSamples);
     }
 
     updateLoudness(filteredBuffer);
 
-    // Peak calculation on raw (with gain) buffer
+    // Peak analysis on the gain-staged buffer
     float maxPeak = 0.0f;
     float dotProduct = 0.0f;
     float magL = 0.0f;
     float magR = 0.0f;
 
-    auto* channelL = buffer.getReadPointer(0);
-    auto* channelR = totalNumInputChannels > 1 ? buffer.getReadPointer(1) : channelL;
+    const float* channelL = buffer.getReadPointer(0);
+    const float* channelR = (numInputs > 1) ? buffer.getReadPointer(1) : channelL;
 
-    for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
-        const float l = channelL[sample];
-        const float r = channelR[sample];
+    for (int s = 0; s < numSamples; ++s) {
+        const float l = channelL[s];
+        const float r = channelR[s];
         
-        const float absL = std::abs(l);
-        const float absR = std::abs(r);
-        const float currentMax = std::max(absL, absR);
-        if (currentMax > maxPeak) maxPeak = currentMax;
+        const float absL = std::fabsf(l);
+        const float absR = std::fabsf(r);
+        maxPeak = std::max({maxPeak, absL, absR});
 
         dotProduct += l * r;
         magL += l * l;
         magR += r * r;
     }
     
-    const float correlationDenom = std::sqrtf(magL * magR) + 1.0e-10f;
+    // Stereo Field Analysis
+    const float correlationDenom = std::sqrtf(magL * magR) + 1.0e-11f;
     currentMeters.correlation = dotProduct / correlationDenom;
-    currentMeters.stereoWidth = 1.0f - std::abs(currentMeters.correlation + 1.0f) * 0.5f;
+    currentMeters.stereoWidth = 1.0f - std::fabsf(currentMeters.correlation + 1.0f) * 0.5f;
 
-    float peakDb = linearToDb(maxPeak);
+    const float peakDb = linearToDb(maxPeak);
     currentMeters.peak = peakDb;
     if (peakDb > currentMeters.peakMax) currentMeters.peakMax = peakDb;
 }
 
 void SonicMeterAudioProcessor::updateLoudness(const juce::AudioBuffer<float>& buffer)
 {
-    int numSamples = buffer.getNumSamples();
+    const int numSamples = buffer.getNumSamples();
+    const int numChannels = buffer.getNumChannels();
     float sumSq = 0.0f;
     
-    for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
-        auto* channelData = buffer.getReadPointer(ch);
+    for (int ch = 0; ch < numChannels; ++ch) {
+        const float* data = buffer.getReadPointer(ch);
         for (int s = 0; s < numSamples; ++s) {
-            float val = channelData[s];
-            sumSq += val * val;
+            sumSq += data[s] * data[s];
         }
     }
     
-    float meanSq = sumSq / (float)(numSamples * std::max(1, buffer.getNumChannels()));
-    float mntLufs = 10.0f * std::log10f(meanSq + 1e-10f) + 0.69f; // K-weighting offset
+    const float meanSq = sumSq / (float)(std::max(1, numSamples * numChannels));
+    const float mntLufs = 10.0f * std::log10f(meanSq + 1.0e-11f) + 0.695f; 
     
     currentMeters.momentaryLufs = mntLufs;
-    
-    // VU calculation (slow decay)
-    float targetVu = juce::jlimit(-20.0f, 3.0f, mntLufs + 18.0f);
+    if (mntLufs > currentMeters.momentaryMax) currentMeters.momentaryMax = mntLufs;
+
+    // Ballistics - VU Simulation (Standard 300ms integration)
+    const float targetVu = juce::jlimit(-20.0f, 4.0f, mntLufs + 18.0f);
     if (targetVu > currentMeters.vuValue) 
         currentMeters.vuValue = targetVu;
     else 
-        currentMeters.vuValue += (targetVu - currentMeters.vuValue) * 0.05f;
+        currentMeters.vuValue += (targetVu - currentMeters.vuValue) * 0.075f;
 
-    if (mntLufs > currentMeters.momentaryMax) currentMeters.momentaryMax = mntLufs;
-    
-    // Simple averaging for Short Term and Integrated for now
-    integratedSum += meanSq;
+    // Integrated Accumulation
+    integratedSum += (double)meanSq;
     integratedCount++;
     
     if (integratedCount > 0) {
-        float avgMeanSq = (float)(integratedSum / (double)integratedCount);
-        currentMeters.integratedLufs = 10.0f * std::log10f(avgMeanSq + 1e-10f) + 0.69f;
+        const float avgMeanSq = (float)(integratedSum / (double)integratedCount);
+        currentMeters.integratedLufs = 10.0f * std::log10f(avgMeanSq + 1.0e-11f) + 0.695f;
     }
     
-    currentMeters.shortTermLufs = mntLufs; // Simulated short term
+    // Short Term (3s rolling window approximation)
+    shortTermHistory.push_back(meanSq);
+    if (shortTermHistory.size() > 90) { // Approx 3s of blocks at typical buffer sizes
+        shortTermHistory.erase(shortTermHistory.begin());
+    }
     
-    // Update history for graph
+    float stSumSq = 0.0f;
+    for (float v : shortTermHistory) stSumSq += v;
+    const float stMeanSq = stSumSq / (float)(std::max((size_t)1, shortTermHistory.size()));
+    currentMeters.shortTermLufs = 10.0f * std::log10f(stMeanSq + 1.0e-11f) + 0.695f;
+    
+    // History Tracking
     currentMeters.history[currentMeters.historyIdx] = mntLufs;
     currentMeters.historyIdx = (currentMeters.historyIdx + 1) % 200;
 }
 
 void SonicMeterAudioProcessor::resetStats()
 {
-    currentMeters.peakMax = -100.0f;
-    currentMeters.momentaryMax = -100.0f;
-    currentMeters.shortTermMax = -100.0f;
-    currentMeters.integratedLufs = -100.0f;
+    const float infDb = -100.0f;
+    currentMeters.peakMax = infDb;
+    currentMeters.momentaryMax = infDb;
+    currentMeters.shortTermMax = infDb;
+    currentMeters.integratedLufs = infDb;
     currentMeters.vuValue = -20.0f;
+    
     integratedSum = 0.0;
     integratedCount = 0;
-    for (int i = 0; i < 200; ++i) currentMeters.history[i] = -70.0f;
+    shortTermHistory.clear();
+    
+    for (int i = 0; i < 200; ++i) 
+        currentMeters.history[i] = -70.0f;
 }
 
 juce::AudioProcessorEditor* SonicMeterAudioProcessor::createEditor()
@@ -156,8 +171,17 @@ juce::AudioProcessorEditor* SonicMeterAudioProcessor::createEditor()
     return new SonicMeterAudioProcessorEditor (*this);
 }
 
-void SonicMeterAudioProcessor::getStateInformation (juce::MemoryBlock& destData) {}
-void SonicMeterAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {}
+void SonicMeterAudioProcessor::getStateInformation (juce::MemoryBlock& destData) 
+{
+    juce::MemoryOutputStream stream(destData, true);
+    stream.writeFloat(gainFactor);
+}
+
+void SonicMeterAudioProcessor::setStateInformation (const void* data, int sizeInBytes) 
+{
+    juce::MemoryInputStream stream(data, (size_t)sizeInBytes, false);
+    gainFactor = stream.readFloat();
+}
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {

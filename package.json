@@ -1,8 +1,8 @@
 {
   "name": "sonicmeter-pro",
   "private": true,
-  "version": "1.7.1",
-  "description": "Professional Loudness Metering Plugin - Vanguard Edition",
+  "version": "1.8.0",
+  "description": "SonicMeter Pro Platinum - High-Performance Audio Metering",
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
