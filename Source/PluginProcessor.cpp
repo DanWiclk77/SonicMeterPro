@@ -74,12 +74,12 @@ void SonicMeterAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
     auto* channelR = totalNumInputChannels > 1 ? buffer.getReadPointer(1) : channelL;
 
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
-        float l = channelL[sample];
-        float r = channelR[sample];
+        const float l = channelL[sample];
+        const float r = channelR[sample];
         
-        float absL = std::abs(l);
-        float absR = std::abs(r);
-        float currentMax = std::max(absL, absR);
+        const float absL = std::abs(l);
+        const float absR = std::abs(r);
+        const float currentMax = std::max(absL, absR);
         if (currentMax > maxPeak) maxPeak = currentMax;
 
         dotProduct += l * r;
@@ -87,7 +87,7 @@ void SonicMeterAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
         magR += r * r;
     }
     
-    currentMeters.correlation = dotProduct / (std::sqrt(magL * magR) + 1e-10f);
+    currentMeters.correlation = dotProduct / (std::sqrt((double)magL * (double)magR) + 1.0e-10);
     currentMeters.stereoWidth = 1.0f - std::abs(currentMeters.correlation + 1.0f) * 0.5f;
 
     float peakDb = linearToDb(maxPeak);

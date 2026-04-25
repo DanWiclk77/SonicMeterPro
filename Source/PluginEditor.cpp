@@ -121,11 +121,11 @@ void SonicMeterAudioProcessorEditor::drawDigitalMeter(juce::Graphics& g, juce::R
     
     g.setColour(juce::Colours::grey);
     g.setFont(10.0f);
-    g.drawText(label, area.removeFromTop(15), juce::Justification::left);
+    g.drawText(label, area.removeFromTop(15.0f), juce::Justification::left);
     
     g.setColour(color);
     g.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 30.0f, juce::Font::bold));
-    juce::String valStr = (value <= -70.0f) ? juce::String("-inf") : juce::String(value, 1);
+    const juce::String valStr = (value <= -70.0f) ? juce::String("-inf") : juce::String(value, 1);
     g.drawText(valStr, area, juce::Justification::centredLeft);
 }
 
