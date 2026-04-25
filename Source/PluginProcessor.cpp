@@ -103,6 +103,19 @@ void SonicMeterAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
     currentMeters.peak = peakDb;
     if (peakDb > currentMeters.peakMax) currentMeters.peakMax = peakDb;
 
+    // Update Meter Smoothing (Slow Ballistics for visual legibility)
+    // Numbers need slower decay for human eye
+    auto smooth = [this](float& current, float target, float speed) {
+        if (target > current) current = target; // Instant peak rise
+        else current += (target - current) * speed; 
+    };
+
+    float visualDecay = 0.03f; // Slower for numbers
+    smooth(currentMeters.peakDisplay, currentMeters.peak, visualDecay);
+    smooth(currentMeters.rmsDisplay, currentMeters.rms, visualDecay);
+    smooth(currentMeters.momentaryDisplay, currentMeters.momentaryLufs, visualDecay);
+    smooth(currentMeters.truePeakDisplay, currentMeters.peak, visualDecay);
+
     // Update PLR
     currentMeters.plr = currentMeters.peakMax - currentMeters.integratedLufs;
 }
@@ -127,7 +140,7 @@ void SonicMeterAudioProcessor::updateLoudness(const juce::AudioBuffer<float>& bu
     if (mntLufs > currentMeters.momentaryMax) currentMeters.momentaryMax = mntLufs;
 
     // Ballistics - VU Simulation (Standard 300ms integration)
-    const float targetVu = juce::jlimit(-20.0f, 4.0f, mntLufs + 18.0f);
+    const float targetVu = juce::jlimit(-20.0f, 4.0f, mntLufs - vuCalibration);
     if (targetVu > currentMeters.vuValue) 
         currentMeters.vuValue = targetVu;
     else 
@@ -171,6 +184,11 @@ void SonicMeterAudioProcessor::resetStats()
     currentMeters.plr = 0.0f;
     currentMeters.vuValue = -20.0f;
     
+    currentMeters.peakDisplay = infDb;
+    currentMeters.rmsDisplay = infDb;
+    currentMeters.momentaryDisplay = infDb;
+    currentMeters.truePeakDisplay = infDb;
+    
     integratedSum = 0.0;
     integratedCount = 0;
     shortTermHistory.clear();
@@ -187,13 +205,17 @@ juce::AudioProcessorEditor* SonicMeterAudioProcessor::createEditor()
 void SonicMeterAudioProcessor::getStateInformation (juce::MemoryBlock& destData) 
 {
     juce::MemoryOutputStream stream(destData, true);
-    stream.writeFloat(gainFactor);
+    stream.writeFloat(gainDb);
+    stream.writeFloat(vuCalibration);
+    stream.writeInt((int)currentPreset);
 }
 
 void SonicMeterAudioProcessor::setStateInformation (const void* data, int sizeInBytes) 
 {
     juce::MemoryInputStream stream(data, (size_t)sizeInBytes, false);
-    gainFactor = stream.readFloat();
+    setGainDb(stream.readFloat());
+    vuCalibration = stream.readFloat();
+    currentPreset = (StreamingPreset)stream.readInt();
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

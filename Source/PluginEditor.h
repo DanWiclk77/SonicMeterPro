@@ -29,6 +29,10 @@ private:
     juce::Label gainLabel;
     juce::TextButton resetButton;
     
+    juce::ComboBox presetSelector;
+    juce::Slider calibSlider;
+    juce::Label calibLabel;
+    
     // Internal Drawing Primitives
     void drawVUMeter (juce::Graphics& g, const juce::Rectangle<float> area, float value);
     void drawDigitalMeter (juce::Graphics& g, const juce::Rectangle<float> area, const juce::String label, float value, juce::Colour color);

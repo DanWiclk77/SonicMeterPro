@@ -56,6 +56,13 @@ public:
         float loudnessRange = 0.0f;
         float plr = 0.0f;
         float vuValue = -20.0f;
+        
+        // Smoothed values for visual legibility (Slow Ballistics)
+        float peakDisplay = -100.0f;
+        float rmsDisplay = -100.0f;
+        float momentaryDisplay = -100.0f;
+        float truePeakDisplay = -100.0f;
+        
         float history[200];
         int historyIdx = 0;
         float correlation = 0.0f;
@@ -67,11 +74,29 @@ public:
         }
     };
 
+    enum StreamingPreset {
+        None,
+        Spotify,
+        YouTube,
+        AppleMusic,
+        Beatport,
+        Club
+    };
+
     Meters getMeters() const { return currentMeters; }
     void resetStats();
 
-    float getGain() const { return gainFactor; }
-    void setGain(float newGain) { gainFactor = newGain; }
+    float getGainDb() const { return gainDb; }
+    void setGainDb(float newGainDb) { 
+        gainDb = juce::jlimit(-25.0f, 25.0f, newGainDb); 
+        gainFactor = std::pow(10.0f, gainDb / 20.0f);
+    }
+    
+    float getCalibration() const { return vuCalibration; }
+    void setCalibration(float newCal) { vuCalibration = newCal; }
+    
+    StreamingPreset getPreset() const { return currentPreset; }
+    void setPreset(StreamingPreset p) { currentPreset = p; }
 
 private:
     Meters currentMeters;
@@ -86,7 +111,11 @@ private:
     std::vector<double> accumulationBuffer;
     
     float gainFactor = 1.0f;
+    float gainDb = 0.0f;
     float vuCalibration = -18.0f;
+    StreamingPreset currentPreset = None;
+    
+    float smoothingAlpha = 0.05f; // Fast but readable
     
     double integratedSum = 0.0;
     long long integratedCount = 0;

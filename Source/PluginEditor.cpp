@@ -11,13 +11,38 @@ SonicMeterAudioProcessorEditor::SonicMeterAudioProcessorEditor (SonicMeterAudioP
     // High-resolution UI dimensions
     setSize (1000, 600);
     
-    // Gain Slider - Technical Precision
+    // Gain Slider - Technical Precision (dB Scale)
     gainSlider.setSliderStyle(juce::Slider::RotaryVerticalDrag);
-    gainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
-    gainSlider.setRange(0.0, 2.0, 0.01);
-    gainSlider.setValue((double)processor.getGain(), juce::dontSendNotification);
-    gainSlider.onValueChange = [this] { processor.setGain((float)gainSlider.getValue()); };
+    gainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 80, 20);
+    gainSlider.setRange(-25.0, 25.0, 0.1);
+    gainSlider.setSuffix(" dB");
+    gainSlider.setValue((double)processor.getGainDb(), juce::dontSendNotification);
+    gainSlider.onValueChange = [this] { processor.setGainDb((float)gainSlider.getValue()); };
     addAndMakeVisible(gainSlider);
+    
+    // VU Calibration Slider
+    calibSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    calibSlider.setRange(-24.0, -8.0, 1.0);
+    calibSlider.setValue((double)processor.getCalibration(), juce::dontSendNotification);
+    calibSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    calibSlider.onValueChange = [this] { 
+        processor.setCalibration((float)calibSlider.getValue()); 
+        calibLabel.setText("VU REF: " + juce::String(calibSlider.getValue(), 0) + " dBFS", juce::dontSendNotification);
+    };
+    addAndMakeVisible(calibSlider);
+
+    calibLabel.setText("VU REF: " + juce::String(calibSlider.getValue(), 0) + " dBFS", juce::dontSendNotification);
+    calibLabel.setFont(juce::Font(10.0f, juce::Font::bold));
+    calibLabel.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(calibLabel);
+
+    // Preset Selector
+    presetSelector.addItemList({"NO PRESET", "SPOTIFY (-14)", "YOUTUBE (-14)", "APPLE MUSIC (-16)", "BEATPORT (-9)", "CLUB / LOUD (-6)"}, 1);
+    presetSelector.setSelectedItemIndex((int)processor.getPreset(), juce::dontSendNotification);
+    presetSelector.onChange = [this] {
+        processor.setPreset((SonicMeterAudioProcessor::StreamingPreset)presetSelector.getSelectedItemIndex());
+    };
+    addAndMakeVisible(presetSelector);
     
     // Labeling
     gainLabel.setText("INPUT TRIM", juce::dontSendNotification);
@@ -60,7 +85,7 @@ void SonicMeterAudioProcessorEditor::paint (juce::Graphics& g)
     auto headerArea = bounds.removeFromTop(40.0f);
     g.setColour(juce::Colours::white.withAlpha(0.6f));
     g.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 14.0f, juce::Font::bold));
-    g.drawText("SONIC-METER PRO / PLATINUM EDITION", headerArea.withTrimmedRight(120), juce::Justification::centredLeft);
+    g.drawText("SONIC-METER PRO / PLATINUM EDITION", headerArea, juce::Justification::centred);
 
     // --- LEFT COLUMN: ANALOG HERITAGE ---
     auto leftColumn = bounds.removeFromLeft(300.0f);
@@ -109,7 +134,7 @@ void SonicMeterAudioProcessorEditor::paint (juce::Graphics& g)
     drawDigitalMeter(g, row1.reduced(2.0f), "PLR INTEGRATED", meters.plr, juce::Colours::white.withAlpha(0.6f));
     
     auto row2 = miniGrid.reduced(2.0f);
-    drawDigitalMeter(g, row2.removeFromLeft(miniWidth).reduced(2.0f), "MOMENTARY", meters.momentaryLufs, juce::Colours::cyan.withAlpha(0.7f));
+    drawDigitalMeter(g, row2.removeFromLeft(miniWidth).reduced(2.0f), "MOMENTARY", meters.momentaryDisplay, juce::Colours::cyan.withAlpha(0.7f));
     drawDigitalMeter(g, row2.reduced(2.0f), "MOMENTARY MAX", meters.momentaryMax, juce::Colours::white.withAlpha(0.5f));
 
     // --- RIGHT COLUMN: TRANSIENT & FIELD ---
@@ -142,9 +167,9 @@ void SonicMeterAudioProcessorEditor::paint (juce::Graphics& g)
     g.setFont(10.0f);
     g.drawText("TRANSIENT CHECK", transientContent.removeFromTop(15.0f), juce::Justification::left);
     
-    drawDigitalMeter(g, transientContent.removeFromTop(90.0f).reduced(2.0f), "TRUE PEAK (CURRENT)", meters.peak, juce::Colours::red.withSaturation(0.7f));
+    drawDigitalMeter(g, transientContent.removeFromTop(90.0f).reduced(2.0f), "TRUE PEAK (CURRENT)", meters.truePeakDisplay, juce::Colours::red.withSaturation(0.7f));
     drawDigitalMeter(g, transientContent.removeFromTop(90.0f).reduced(2.0f), "TRUE PEAK MAX", meters.peakMax, juce::Colours::orange.withSaturation(0.7f));
-    drawDigitalMeter(g, transientContent.reduced(2.0f), "RMS AVG", meters.rms, juce::Colours::white.withAlpha(0.8f));
+    drawDigitalMeter(g, transientContent.reduced(2.0f), "RMS AVG", meters.rmsDisplay, juce::Colours::white.withAlpha(0.8f));
 }
 
 void SonicMeterAudioProcessorEditor::drawCorrelationMeter(juce::Graphics& g, const juce::Rectangle<float> area, float value)
@@ -244,6 +269,27 @@ void SonicMeterAudioProcessorEditor::drawDigitalMeter(juce::Graphics& g, const j
     
     const juce::String valStr = (value <= -70.0f) ? juce::String("-INF") : juce::String(value, 1);
     g.drawText(valStr, textBounds, juce::Justification::centredLeft);
+
+    // Draw Target Marker if Integrated
+    if (label == "INTEGRATED LOUDNESS") {
+        float target = 0.0f;
+        auto preset = processor.getPreset();
+        if (preset == SonicMeterAudioProcessor::Spotify || preset == SonicMeterAudioProcessor::YouTube) target = -14.0f;
+        else if (preset == SonicMeterAudioProcessor::AppleMusic) target = -16.0f;
+        else if (preset == SonicMeterAudioProcessor::Beatport) target = -9.0f;
+        else if (preset == SonicMeterAudioProcessor::Club) target = -6.0f;
+
+        if (target != 0.0f) {
+            g.setColour(juce::Colours::white.withAlpha(0.2f));
+            g.drawText("TARGET: " + juce::String(target, 0) + " LUFS", textBounds, juce::Justification::centredRight);
+            
+            // Visual diff indicator
+            float diff = value - target;
+            juce::Colour diffCol = std::abs(diff) < 1.0f ? juce::Colours::green : (diff > 0 ? juce::Colours::red : juce::Colours::orange);
+            g.setColour(diffCol.withAlpha(0.6f));
+            g.drawHorizontalLine((int)(textBounds.getBottom() - 2), textBounds.getX(), textBounds.getX() + 40);
+        }
+    }
 }
 
 void SonicMeterAudioProcessorEditor::drawVUMeter(juce::Graphics& g, const juce::Rectangle<float> area, float value)
@@ -262,15 +308,15 @@ void SonicMeterAudioProcessorEditor::drawVUMeter(juce::Graphics& g, const juce::
     g.fillRoundedRectangle(plate, 6.0f);
     
     const float centerX = plate.getCentreX();
-    const float bottomY = plate.getBottom() + 15.0f; // Lower pivot for better scaling
-    const float radius = plate.getHeight() * 1.05f;
+    const float bottomY = plate.getBottom() + 35.0f; // Lower pivot for better scaling
+    const float radius = plate.getHeight() * 0.90f;
     
     // Scale Markings
     for (int i = -20; i <= 3; i += 1)
     {
         const float angle = juce::jmap((float)i, -20.0f, 3.0f, -0.65f, 0.65f);
         const float angleRad = angle - juce::MathConstants<float>::halfPi;
-        const float tickLen = (i % 5 == 0) ? 12.0f : 6.0f;
+        const float tickLen = (i % 5 == 0) ? 10.0f : 5.0f;
         
         const juce::Point<float> pivot(centerX, bottomY);
         const juce::Point<float> p1 = pivot + juce::Point<float> (radius * std::cos (angleRad), radius * std::sin (angleRad));
@@ -283,7 +329,7 @@ void SonicMeterAudioProcessorEditor::drawVUMeter(juce::Graphics& g, const juce::
         
         if (i % 5 == 0 || i == 3) {
             g.setFont(juce::Font(10.0f, juce::Font::bold));
-            const float textRadius = radius - 24.0f;
+            const float textRadius = radius - 20.0f;
             const juce::Point<float> pT = pivot + juce::Point<float> (textRadius * std::cos (angleRad), textRadius * std::sin (angleRad));
             g.drawText(juce::String(i), juce::Rectangle<float>(pT.getX() - 15.0f, pT.getY() - 10.0f, 30.0f, 20.0f), juce::Justification::centred);
         }
@@ -313,17 +359,24 @@ void SonicMeterAudioProcessorEditor::resized()
 {
     const auto bounds = getLocalBounds();
     
-    // Header for Reset Button
-    resetButton.setBounds(bounds.withTrimmedTop(10).withTrimmedRight(10).withHeight(25).withWidth(110));
+    // Header Section - Fixed overlaps
+    auto header = bounds.removeFromTop(40);
+    resetButton.setBounds(header.removeFromLeft(140).reduced(10, 8));
+    presetSelector.setBounds(header.removeFromRight(180).reduced(10, 8));
 
     // Layout helper
     auto mainArea = bounds.reduced(20);
-    mainArea.removeFromTop(40); // Title skip
     
     auto leftArea = mainArea.removeFromLeft(300);
-    leftArea.removeFromTop(320); // VU Panel skip
+    auto vuSection = leftArea.removeFromTop(320);
     
-    auto controlArea = leftArea.reduced(50, 20);
+    // Calibration Slider positioning
+    auto calibArea = vuSection.removeFromTop(35).reduced(20, 0);
+    calibSlider.setBounds(calibArea.removeFromLeft(calibArea.getWidth() / 2).reduced(0, 5));
+    calibLabel.setBounds(calibArea.reduced(0, 5));
+    
+    // Gain / Trim Section
+    auto controlArea = leftArea.reduced(50, 10);
     gainLabel.setBounds(controlArea.removeFromTop(20));
     gainSlider.setBounds(controlArea);
 }
