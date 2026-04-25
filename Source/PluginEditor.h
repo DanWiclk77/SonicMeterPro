@@ -1,6 +1,8 @@
 #ifndef PLUGINEDITOR_H
 #define PLUGINEDITOR_H
 
+#include <juce_gui_extra/juce_gui_extra.h>
+#include <juce_graphics/juce_graphics.h>
 #include "PluginProcessor.h"
 
 class SonicMeterAudioProcessorEditor : public juce::AudioProcessorEditor, 
