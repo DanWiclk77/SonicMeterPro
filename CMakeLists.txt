@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.22)
 
 project(SonicMeterPro VERSION 1.8.0)
 
+# Global Xcode settings BEFORE any project configuration
+set(CMAKE_XCODE_GENERATE_SCHEME ON)
+set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC ON)
+
 # 1. Download JUCE and include it
 include(FetchContent)
 FetchContent_Declare(
@@ -25,41 +29,41 @@ juce_add_plugin(SonicMeterPro
     FORMATS VST3 AU Standalone
     PRODUCT_NAME "SonicMeter Pro")
 
-# 3. Configure Xcode to use dependency analysis for script phases
-# This fixes the "Run script build phase will be run during every build" warnings
+# 3. Configure Xcode AFTER all targets are created
 if(APPLE)
-    # Set architectures
+    # Set architectures for main target
     set_target_properties(SonicMeterPro PROPERTIES 
         OSX_ARCHITECTURES "arm64;x86_64"
     )
     
-    # Enable dependency analysis for all build phases to avoid unnecessary re-runs
-    set_target_properties(SonicMeterPro PROPERTIES
+    # Configure CMake utility targets - MUST be done AFTER juce_add_plugin
+    # These targets are created by CMake/JUCE internally
+    set_property(TARGET ZERO_CHECK APPEND PROPERTY
         XCODE_GENERATE_SCHEME ON
     )
     
-    # Configure JUCE helper targets if they exist
-    foreach(juce_target IN ITEMS ZERO_CHECK ALL_BUILD)
-        if(TARGET ${juce_target})
-            set_target_properties(${juce_target} PROPERTIES
-                XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
-            )
-        endif()
-    endforeach()
+    set_property(TARGET ALL_BUILD APPEND PROPERTY
+        XCODE_GENERATE_SCHEME ON
+    )
     
-    # Apply dependency file build phase to plugin targets
+    # Configure plugin targets with proper input/output dependencies
     foreach(plugin_target IN ITEMS SonicMeterPro_VST3 SonicMeterPro_AU SonicMeterPro_Standalone)
         if(TARGET ${plugin_target})
-            # Use symbolic file input/output for CMake-generated schemes
+            # Set properties after target creation
             set_target_properties(${plugin_target} PROPERTIES
-                XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR "$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)"
+                XCODE_GENERATE_SCHEME ON
+            )
+            
+            # Use explicit input/output for build phases
+            set_property(TARGET ${plugin_target} APPEND PROPERTY
+                XCODE_GENERATE_SCHEME ON
             )
         endif()
     endforeach()
     
-    # Global Xcode settings for proper dependency tracking
-    set(CMAKE_XCODE_GENERATE_SCHEME ON)
-    set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC ON)
+    # Set CMake utility directories to track changes
+    set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
+    set(CMAKE_XCODE_ATTRIBUTE_COPY_PHASE_STRIP NO)
 endif()
 
 # 4. Add Source files
