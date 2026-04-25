@@ -23,3 +23,7 @@
 - **Modular Panels:** Dividir la interfaz en secciones funcionales claras (Análisis Analógico, Espectro, Métricas Digitales).
 - **Dark Carbon Theme:** Fondos casi negros con acentos cian y rojos de alta saturación.
 - **Reference Grids:** Mostrar siempre líneas de referencia (grillas) en gráficos y medidores para utilidad técnica.
+
+## Build & Debugging Guidelines
+
+- **Verbose Output:** Siempre usar flags de verbosidad (ej. `--parallel 4 --verbose` en CMake) en los flujos de GitHub Actions y scripts locales para diagnosticar fallos de arquitectura o librerías faltantes de forma instantánea.

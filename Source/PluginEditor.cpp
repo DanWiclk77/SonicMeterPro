@@ -17,7 +17,7 @@ SonicMeterAudioProcessorEditor::SonicMeterAudioProcessorEditor (SonicMeterAudioP
     gainSlider.setSliderStyle(juce::Slider::RotaryVerticalDrag);
     gainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 80, 20);
     gainSlider.setRange(-25.0, 25.0, 0.1);
-    gainSlider.setSuffix(" dB");
+    gainSlider.setTextValueSuffix(" dB");
     gainSlider.setValue((double)processor.getGainDb(), juce::dontSendNotification);
     gainSlider.onValueChange = [this] { processor.setGainDb((float)gainSlider.getValue()); };
     addAndMakeVisible(gainSlider);
@@ -359,7 +359,7 @@ void SonicMeterAudioProcessorEditor::drawVUMeter(juce::Graphics& g, const juce::
 
 void SonicMeterAudioProcessorEditor::resized() 
 {
-    const auto bounds = getLocalBounds();
+    auto bounds = getLocalBounds();
     
     // Header Section - Fixed overlaps
     auto header = bounds.removeFromTop(40);
