@@ -87,8 +87,8 @@ void SonicMeterAudioProcessorEditor::drawCorrelationMeter(juce::Graphics& g, juc
     g.drawHorizontalLine(barArea.getCentreY(), barArea.getX(), barArea.getRight());
     
     g.setColour(value < 0 ? juce::Colours::red : juce::Colours::cyan);
-    float x = juce::jmap(value, -1.0f, 1.0f, barArea.getX(), barArea.getRight());
-    g.fillEllipse(x - 3, barArea.getCentreY() - 3, 6, 6);
+    float xPos = juce::jmap(value, -1.0f, 1.0f, barArea.getX(), barArea.getRight());
+    g.fillEllipse(xPos - 3.0f, barArea.getCentreY() - 3.0f, 6.0f, 6.0f);
 }
 
 void SonicMeterAudioProcessorEditor::drawHistoryGraph(juce::Graphics& g, juce::Rectangle<float> area, const float* history, int historyIdx)
@@ -152,9 +152,8 @@ void SonicMeterAudioProcessorEditor::drawVUMeter(juce::Graphics& g, juce::Rectan
         
         if (i % 4 == 0 || i == 0 || i == 3) {
             g.setFont(12.0f);
-            const juce::Point<float> pPivot(centerX, bottomY);
-            const juce::Point<float> pText = pPivot.getPointOnLine(radius - 20.0f, scaleAngle - juce::MathConstants<float>::halfPi);
-            g.drawText(juce::String(i), juce::Rectangle<float>(pText.x - 15.0f, pText.y - 10.0f, 30.0f, 20.0f), juce::Justification::centred, false);
+            const juce::Point<float> pText = juce::Point<float>(centerX, bottomY).getPointOnLine(radius - 20.0f, scaleAngle - juce::MathConstants<float>::halfPi);
+            g.drawText(juce::String(i), juce::Rectangle<float>(pText.getX() - 15.0f, pText.getY() - 10.0f, 30.0f, 20.0f), juce::Justification::centred, false);
         }
     }
 

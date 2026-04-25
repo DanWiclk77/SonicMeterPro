@@ -87,7 +87,8 @@ void SonicMeterAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
         magR += r * r;
     }
     
-    currentMeters.correlation = dotProduct / (std::sqrt((double)magL * (double)magR) + 1.0e-10);
+    const float correlationDenom = std::sqrt(magL * magR) + 1.0e-10f;
+    currentMeters.correlation = dotProduct / correlationDenom;
     currentMeters.stereoWidth = 1.0f - std::abs(currentMeters.correlation + 1.0f) * 0.5f;
 
     float peakDb = linearToDb(maxPeak);
