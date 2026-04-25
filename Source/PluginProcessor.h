@@ -52,10 +52,15 @@ public:
         float integratedLufs = -100.0f;
         float loudnessRange = 0.0f;
         float vuValue = -20.0f;
-        float history[200] = { -70.0f };
+        float history[200];
         int historyIdx = 0;
         float correlation = 0.0f;
         float stereoWidth = 0.0f;
+
+        Meters()
+        {
+            for (int i = 0; i < 200; ++i) history[i] = -70.0f;
+        }
     };
 
     Meters getMeters() const { return currentMeters; }

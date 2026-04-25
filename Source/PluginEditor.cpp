@@ -107,16 +107,13 @@ void SonicMeterAudioProcessorEditor::drawVUMeter(juce::Graphics& g, juce::Rectan
     
     g.setColour(juce::Colours::black);
     float angle = juce::jmap(value, -20.0f, 3.0f, -0.8f, 0.8f);
-    auto pivot = area.getBottomLeft().getPointOnLine(area.getWidth() * 0.5f, -10.0f);
+    juce::Point<float> pivot (area.getCentreX(), area.getBottom() - 10.0f);
     
     juce::Path needle;
     needle.addRectangle(-1.0f, -area.getHeight() * 0.8f, 2.0f, area.getHeight() * 0.8f);
     
-    g.saveState();
-    g.translate(pivot.x, pivot.y);
-    g.rotate(angle);
-    g.fillPath(needle);
-    g.restoreState();
+    g.setColour(juce::Colours::black);
+    g.fillPath(needle, juce::AffineTransform::rotation(angle, pivot.x, pivot.y));
 }
 
 void SonicMeterAudioProcessorEditor::resized() {}
