@@ -12,6 +12,7 @@
 #include <juce_core/juce_core.h>
 #include <vector>
 #include <cmath>
+#include <algorithm>
 
 class SonicMeterAudioProcessor : public juce::AudioProcessor
 {

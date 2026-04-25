@@ -123,7 +123,7 @@ void SonicMeterAudioProcessorEditor::drawVUMeter(juce::Graphics& g, juce::Rectan
         if (i % 4 == 0 || i == 0 || i == 3) {
             g.setFont(12.0f);
             auto pText = juce::Point<float>(centerX, bottomY).getPointOnLine(radius - 25, angle - juce::MathConstants<float>::halfPi);
-            g.drawText(juce::String(i), pText.x - 15, pText.y - 10, 30, 20, juce::Justification::centred);
+            g.drawText(juce::String(i), juce::Rectangle<float>(pText.x - 15, pText.y - 10, 30, 20), juce::Justification::centred, false);
         }
     }
 
@@ -142,3 +142,8 @@ void SonicMeterAudioProcessorEditor::drawVUMeter(juce::Graphics& g, juce::Rectan
 
 void SonicMeterAudioProcessorEditor::resized() {}
 void SonicMeterAudioProcessorEditor::timerCallback() { repaint(); }
+
+void SonicMeterAudioProcessorEditor::mouseDown (const juce::MouseEvent& e)
+{
+    processor.resetStats();
+}

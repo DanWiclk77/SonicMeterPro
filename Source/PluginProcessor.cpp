@@ -23,15 +23,17 @@ SonicMeterAudioProcessor::~SonicMeterAudioProcessor() {}
 void SonicMeterAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     // Initialize K-Weighting filters (Standard EBU R128)
-    // High Shelf
-    auto preCoeffs = juce::IIRCoefficients::makeHighShelf(sampleRate, 1500.0, 1.414, 4.0);
+    // High Shelf (Pre-filter)
+    auto preCoeffs = juce::IIRCoefficients::makeHighShelf(sampleRate, 1500.0, 0.707, 4.0);
     preFilterL.setCoefficients(preCoeffs);
     preFilterR.setCoefficients(preCoeffs);
     
-    // High Pass
+    // High Pass (K-filter)
     auto weightCoeffs = juce::IIRCoefficients::makeHighPass(sampleRate, 100.0, 1.0);
     weightFilterL.setCoefficients(weightCoeffs);
     weightFilterR.setCoefficients(weightCoeffs);
+
+    resetStats();
 }
 
 void SonicMeterAudioProcessor::releaseResources() {}
@@ -49,10 +51,16 @@ void SonicMeterAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
     buffer.applyGain(gainFactor);
 
     // Filter for loudness calculation
-    juce::AudioBuffer<float> filteredBuffer(buffer);
+    juce::AudioBuffer<float> filteredBuffer;
+    filteredBuffer.makeCopyOf(buffer);
+    
+    preFilterL.processSamples(filteredBuffer.getWritePointer(0), buffer.getNumSamples());
     weightFilterL.processSamples(filteredBuffer.getWritePointer(0), buffer.getNumSamples());
-    if (totalNumInputChannels > 1)
+    
+    if (totalNumInputChannels > 1) {
+        preFilterR.processSamples(filteredBuffer.getWritePointer(1), buffer.getNumSamples());
         weightFilterR.processSamples(filteredBuffer.getWritePointer(1), buffer.getNumSamples());
+    }
 
     updateLoudness(filteredBuffer);
 
@@ -135,6 +143,11 @@ void SonicMeterAudioProcessor::resetStats()
     currentMeters.peakMax = -100.0f;
     currentMeters.momentaryMax = -100.0f;
     currentMeters.shortTermMax = -100.0f;
+    currentMeters.integratedLufs = -100.0f;
+    currentMeters.vuValue = -20.0f;
+    integratedSum = 0.0;
+    integratedCount = 0;
+    for (int i = 0; i < 200; ++i) currentMeters.history[i] = -70.0f;
 }
 
 juce::AudioProcessorEditor* SonicMeterAudioProcessor::createEditor()
