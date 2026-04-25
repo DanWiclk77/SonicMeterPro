@@ -36,10 +36,26 @@ void SonicMeterAudioProcessorEditor::paint (juce::Graphics& g)
     drawDigitalMeter(g, center.removeFromTop(80).reduced(10), "INTEGRATED", meters.integratedLufs, juce::Colours::cyan);
     drawDigitalMeter(g, center.removeFromTop(80).reduced(10), "SHORT TERM", meters.shortTermLufs, juce::Colours::cyan);
     
-    // Right Section: Peaks
+    // Right Section: Peaks & Analysis
     auto right = bounds.reduced(10);
+    drawCorrelationMeter(g, right.removeFromTop(40).reduced(5), meters.correlation);
+    right.removeFromTop(10);
     drawDigitalMeter(g, right.removeFromTop(80).reduced(5), "TRUE PEAK", meters.peak, juce::Colours::red);
     drawDigitalMeter(g, right.removeFromTop(80).reduced(5), "PEAK MAX", meters.peakMax, juce::Colours::orange);
+}
+
+void SonicMeterAudioProcessorEditor::drawCorrelationMeter(juce::Graphics& g, juce::Rectangle<float> area, float value)
+{
+    g.setColour(juce::Colours::black);
+    g.fillRoundedRectangle(area, 4.0f);
+    
+    auto barArea = area.reduced(5);
+    g.setColour(juce::Colours::darkgrey);
+    g.drawHorizontalLine(barArea.getCentreY(), barArea.getX(), barArea.getRight());
+    
+    g.setColour(value < 0 ? juce::Colours::red : juce::Colours::cyan);
+    float x = juce::jmap(value, -1.0f, 1.0f, barArea.getX(), barArea.getRight());
+    g.fillEllipse(x - 3, barArea.getCentreY() - 3, 6, 6);
 }
 
 void SonicMeterAudioProcessorEditor::drawHistoryGraph(juce::Graphics& g, juce::Rectangle<float> area, const float* history, int historyIdx)

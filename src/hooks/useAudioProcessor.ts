@@ -13,13 +13,18 @@ export interface MeterData {
   plrShortTerm: number;
   plrIntegrated: number;
   vu: number;
-  history: number[]; // Array of short-term LUFS values for graphing
+  history: number[];
+  correlation: number; // -1 to 1
+  stereoWidth: number; // 0 to 1
 }
 
 export function useAudioProcessor() {
   const [isActive, setIsActive] = useState(false);
   const [gain, setGain] = useState(0); 
+  const [gainB, setGainB] = useState(0); 
+  const [isUsingB, setIsUsingB] = useState(false);
   const [vuCalibration, setVuCalibration] = useState(-18);
+  const [targetLufs, setTargetLufs] = useState(-14); // Default YouTube/Spotify
   const [metrics, setMetrics] = useState<MeterData>({
     peak: -100,
     peakMax: -100,
@@ -33,15 +38,20 @@ export function useAudioProcessor() {
     plrShortTerm: 0,
     plrIntegrated: 0,
     vu: -20,
-    history: new Array(100).fill(-70)
+    history: new Array(100).fill(-70),
+    correlation: 0,
+    stereoWidth: 0
   });
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const analyserRRef = useRef<AnalyserNode | null>(null); // For stereo analysis
   const gainNodeRef = useRef<GainNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
 
+  const currentGain = isUsingB ? gainB : gain;
+  
   // Buffer for ST (3s) and Momentary (400ms)
   const stBuffer = useRef<number[]>([]);
   const integratedHistory = useRef<number[]>([]);
@@ -62,6 +72,7 @@ export function useAudioProcessor() {
       shortTermMax: -100,
       integratedLufs: -100,
       loudnessRange: 0,
+      history: new Array(100).fill(-70)
     }));
   }, []);
 
@@ -74,15 +85,25 @@ export function useAudioProcessor() {
       audioCtxRef.current = audioCtx;
 
       const source = audioCtx.createMediaStreamSource(stream);
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 2048;
-      analyserRef.current = analyser;
+      
+      // Split stereo for analysis
+      const splitter = audioCtx.createChannelSplitter(2);
+      source.connect(splitter);
+
+      const analyserL = audioCtx.createAnalyser();
+      const analyserR = audioCtx.createAnalyser();
+      analyserL.fftSize = 2048;
+      analyserR.fftSize = 2048;
+      
+      splitter.connect(analyserL, 0);
+      splitter.connect(analyserR, 1);
+      
+      analyserRef.current = analyserL;
+      analyserRRef.current = analyserR;
 
       const gainNode = audioCtx.createGain();
       gainNodeRef.current = gainNode;
-
       source.connect(gainNode);
-      gainNode.connect(analyser);
 
       setIsActive(true);
     } catch (err) {
@@ -98,40 +119,48 @@ export function useAudioProcessor() {
   }, []);
 
   useEffect(() => {
-    if (gainNodeRef.current) gainNodeRef.current.gain.value = Math.pow(10, gain / 20);
-  }, [gain]);
+    if (gainNodeRef.current) gainNodeRef.current.gain.value = Math.pow(10, currentGain / 20);
+  }, [currentGain]);
 
   useEffect(() => {
-    if (!isActive || !analyserRef.current) return;
+    if (!isActive || !analyserRef.current || !analyserRRef.current) return;
 
     const bufferLength = analyserRef.current.fftSize;
-    const dataArray = new Float32Array(bufferLength);
-    const sampleRate = audioCtxRef.current?.sampleRate || 44100;
+    const dataL = new Float32Array(bufferLength);
+    const dataR = new Float32Array(bufferLength);
     
     const update = () => {
-      if (!analyserRef.current) return;
-      analyserRef.current.getFloatTimeDomainData(dataArray);
+      if (!analyserRef.current || !analyserRRef.current) return;
+      analyserRef.current.getFloatTimeDomainData(dataL);
+      analyserRRef.current.getFloatTimeDomainData(dataR);
 
-      let sumSquares = 0;
-      let currentPeak = 0;
+      let sumSquaresL = 0;
+      let currentPeakL = 0;
+      let dotProduct = 0;
+      let magL = 0;
+      let magR = 0;
 
       for (let i = 0; i < bufferLength; i++) {
-        const val = dataArray[i];
-        const absVal = Math.abs(val);
-        if (absVal > currentPeak) currentPeak = absVal;
-        sumSquares += val * val;
+        const valL = dataL[i];
+        const valR = dataR[i];
+        
+        sumSquaresL += valL * valL;
+        if (Math.abs(valL) > currentPeakL) currentPeakL = Math.abs(valL);
+        
+        // Correlation & Width
+        dotProduct += valL * valR;
+        magL += valL * valL;
+        magR += valR * valR;
       }
 
-      const rmsLinear = Math.sqrt(sumSquares / bufferLength);
-      const peakDb = 20 * Math.log10(currentPeak || 1e-10);
-      const mntDb = 20 * Math.log10(rmsLinear || 1e-10) + 0.69; // Simple k-weight offset
+      const correlation = dotProduct / (Math.sqrt(magL * magR) || 1);
+      const rmsLinear = Math.sqrt(sumSquaresL / bufferLength);
+      const peakDb = 20 * Math.log10(currentPeakL || 1e-10);
+      const mntDb = 20 * Math.log10(rmsLinear || 1e-10) + 0.69;
 
-      // Track Maxima
       if (peakDb > peakMaxRef.current) peakMaxRef.current = peakDb;
       if (mntDb > momentaryMaxRef.current) momentaryMaxRef.current = mntDb;
 
-      // Sliding Window for Short Term (ST) - approx 3 seconds
-      // Buffer length 2048 at 48k is ~42ms per update. 3s = ~72 updates
       stBuffer.current.push(rmsLinear);
       if (stBuffer.current.length > 72) stBuffer.current.shift();
 
@@ -141,15 +170,12 @@ export function useAudioProcessor() {
       
       if (stLufs > shortTermMaxRef.current) shortTermMaxRef.current = stLufs;
 
-      // Integrated History
       integratedHistory.current.push(rmsLinear);
-      // Simple Integrated: Average of all non-gated samples
-      const gatedHistory = integratedHistory.current.filter(v => v > 0.00001); // Very basic gate
+      const gatedHistory = integratedHistory.current.filter(v => v > 0.00001);
       const intRmsSum = gatedHistory.reduce((a, b) => a + b * b, 0);
       const intRmsLinear = Math.sqrt(intRmsSum / (gatedHistory.length || 1));
       const intLufs = 20 * Math.log10(intRmsLinear || 1e-10) + 0.69;
 
-      // LRA (Simplified: Range of momentary values)
       const sortedInt = [...gatedHistory].sort();
       const p10 = sortedInt[Math.floor(sortedInt.length * 0.1)] || 0;
       const p95 = sortedInt[Math.floor(sortedInt.length * 0.95)] || 1;
@@ -158,10 +184,8 @@ export function useAudioProcessor() {
       setMetrics(prev => {
         const targetVu = peakDb - vuCalibration;
         const vu = prev.vu + (targetVu - prev.vu) * 0.1;
-
-        // Update graphical history (keep last 100 points)
         const updatedHistory = [...prev.history, stLufs];
-        if (updatedHistory.length > 200) updatedHistory.shift();
+        if (updatedHistory.length > 100) updatedHistory.shift();
         
         return {
           peak: peakDb,
@@ -176,7 +200,9 @@ export function useAudioProcessor() {
           plrShortTerm: peakDb - stLufs,
           plrIntegrated: peakMaxRef.current - intLufs,
           vu: Math.max(-20, Math.min(3, vu)),
-          history: updatedHistory
+          history: updatedHistory,
+          correlation,
+          stereoWidth: Math.abs(1 - (correlation + 1) / 2) // Rough width estimation
         };
       });
 
@@ -196,6 +222,12 @@ export function useAudioProcessor() {
     metrics, 
     gain, 
     setGain, 
+    gainB,
+    setGainB,
+    isUsingB,
+    setIsUsingB,
+    targetLufs,
+    setTargetLufs,
     vuCalibration, 
     setVuCalibration,
     resetMetrics 

@@ -8,6 +8,8 @@ import { useAudioProcessor } from './hooks/useAudioProcessor';
 import { VUMeter } from './components/VUMeter';
 import { DigitalMeter } from './components/DigitalMeter';
 import { HistoryGraph } from './components/HistoryGraph';
+import { CorrelationMeter } from './components/CorrelationMeter';
+import { MonoCompatibility } from './components/MonoCompatibility';
 import { 
   Play, 
   Square, 
@@ -17,7 +19,9 @@ import {
   Zap,
   Mic,
   Volume2,
-  AlertTriangle
+  AlertTriangle,
+  Target,
+  ArrowLeftRight
 } from 'lucide-react';
 import { cn } from './lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -30,6 +34,12 @@ export default function App() {
     metrics, 
     gain, 
     setGain, 
+    gainB,
+    setGainB,
+    isUsingB,
+    setIsUsingB,
+    targetLufs,
+    setTargetLufs,
     vuCalibration, 
     setVuCalibration,
     resetMetrics
@@ -90,7 +100,7 @@ export default function App() {
               exit={{ height: 0, opacity: 0 }}
               className="bg-[#1a1a1d] border-b border-[#2a2a2e] overflow-hidden"
             >
-              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center mb-1">
                     <label className="text-[10px] uppercase tracking-widest text-[#666] font-bold">VU Calibration</label>
@@ -102,10 +112,35 @@ export default function App() {
                     onChange={(e) => setVuCalibration(Number(e.target.value))}
                     className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
                   />
-                  <p className="text-[9px] text-zinc-600 leading-relaxed italic">
-                    Adjust the reference level where the analog VU needle hits zero. Standard is -18 dBFS.
-                  </p>
                 </div>
+
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-[10px] uppercase tracking-widest text-[#666] font-bold">Target Loudness</label>
+                    <span className="font-mono text-xs text-emerald-400">{targetLufs} LUFS</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { name: 'Youtube', val: -14 },
+                      { name: 'Spotify', val: -14 },
+                      { name: 'Apple', val: -16 },
+                      { name: 'CD', val: -9 },
+                      { name: 'TV (EBU)', val: -23 },
+                    ].map(p => (
+                      <button 
+                        key={p.name}
+                        onClick={() => setTargetLufs(p.val)}
+                        className={cn(
+                          "px-2 py-1 text-[8px] uppercase tracking-tighter border rounded transition-all",
+                          targetLufs === p.val ? "bg-emerald-500/10 border-emerald-500 text-emerald-400" : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-600"
+                        )}
+                      >
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="bg-[#0e0e10] p-4 border border-[#222] rounded space-y-3">
                   <h4 className="text-[9px] uppercase text-zinc-500 font-bold border-b border-zinc-800 pb-2">Device Info</h4>
                   <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
@@ -135,10 +170,41 @@ export default function App() {
               {/* Gain Staging Knob Area */}
               <div className="w-full mt-6 flex flex-col items-center gap-4">
                  <div className="flex flex-col items-center gap-1">
+                    <div className="flex items-center gap-4 mb-4">
+                      <button 
+                        onClick={() => setIsUsingB(false)}
+                        className={cn(
+                          "px-4 py-1 text-[10px] font-bold rounded transition-all",
+                          !isUsingB ? "bg-cyan-500 text-black" : "bg-zinc-800 text-zinc-500"
+                        )}
+                      >
+                        A
+                      </button>
+                      <button 
+                        onClick={() => setIsUsingB(true)}
+                        className={cn(
+                          "px-4 py-1 text-[10px] font-bold rounded transition-all",
+                          isUsingB ? "bg-cyan-500 text-black" : "bg-zinc-800 text-zinc-500"
+                        )}
+                      >
+                        B
+                      </button>
+                      <button 
+                        onClick={() => {
+                          if (isUsingB) setGainB(gain);
+                          else setGain(gainB);
+                        }}
+                        className="p-1 text-zinc-600 hover:text-cyan-400 transition-colors"
+                      >
+                        <ArrowLeftRight size={14} />
+                      </button>
+                    </div>
+
                     <div className="relative w-16 h-16 rounded-full bg-gradient-to-tr from-[#000] to-[#222] border-2 border-black flex items-center justify-center shadow-[0_5px_15px_rgba(0,0,0,0.5)] cursor-pointer group">
                       <motion.div 
                         className="absolute top-1 w-1 h-3 bg-cyan-400 rounded-full origin-bottom"
-                        style={{ transform: `rotate(${gain * 6}deg)`, x: "-50%" }}
+                        animate={{ rotate: (isUsingB ? gainB : gain) * 6 }}
+                        style={{ x: "-50%" }}
                       />
                       <div className="w-12 h-12 rounded-full border border-[#333] flex items-center justify-center">
                         <Volume2 size={16} className="text-[#333] group-hover:text-cyan-400/50 transition-colors" />
@@ -146,17 +212,17 @@ export default function App() {
                     </div>
                     <span className={cn(
                       "text-xl font-mono mt-2 tracking-tighter transition-all duration-300",
-                      gain === 0 ? "text-zinc-600" : "text-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.2)]"
+                      (isUsingB ? gainB : gain) === 0 ? "text-zinc-600" : "text-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.2)]"
                     )}>
-                      {gain > 0 ? "+" : ""}{gain.toFixed(2)} <span className="text-[10px] text-zinc-600">dB</span>
+                      {(isUsingB ? gainB : gain) > 0 ? "+" : ""}{(isUsingB ? gainB : gain).toFixed(2)} <span className="text-[10px] text-zinc-600">dB</span>
                     </span>
-                    <span className="text-[9px] uppercase tracking-widest text-zinc-700 font-bold">Input Gain</span>
+                    <span className="text-[9px] uppercase tracking-widest text-zinc-700 font-bold">Input Gain STAGE</span>
                  </div>
                  
                  <input 
                   type="range" min="-24" max="24" step="0.01" 
-                  value={gain} 
-                  onChange={(e) => setGain(Number(e.target.value))}
+                  value={isUsingB ? gainB : gain} 
+                  onChange={(e) => isUsingB ? setGainB(Number(e.target.value)) : setGain(Number(e.target.value))}
                   className="w-4/5 h-1 bg-zinc-900 rounded-lg appearance-none cursor-pointer accent-cyan-600"
                 />
               </div>
@@ -253,8 +319,19 @@ export default function App() {
             </div>
           </section>
 
-          {/* COLUMN 3: PEAK & PERFORMANCE (3 spans) */}
+            {/* COLUMN 3: PEAK & PERFORMANCE (3 spans) */}
           <section className="col-span-12 lg:col-span-3 flex flex-col gap-6">
+            {/* Analysis Box */}
+            <div className="bg-[#151518] border border-[#2a2a2e] rounded-xl p-5 flex flex-col gap-4 shadow-inner">
+               <div className="flex items-center gap-2 mb-2">
+                  <Target size={14} className="text-cyan-500" />
+                  <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-zinc-400">Field Analysis</span>
+               </div>
+               
+               <CorrelationMeter value={metrics.correlation} />
+               <MonoCompatibility width={metrics.stereoWidth} />
+            </div>
+
             <div className="flex-1 bg-[#151518] border border-[#2a2a2e] rounded-xl p-6 flex flex-col shadow-inner">
                <div className="flex items-center gap-3 mb-8">
                   <Zap size={14} className="text-red-500" />

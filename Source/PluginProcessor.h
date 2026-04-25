@@ -45,6 +45,8 @@ public:
         float vuValue = -20.0f;
         float history[200] = { -70.0f };
         int historyIdx = 0;
+        float correlation = 0.0f;
+        float stereoWidth = 0.0f;
     };
 
     Meters getMeters() const { return currentMeters; }

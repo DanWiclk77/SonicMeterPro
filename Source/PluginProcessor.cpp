@@ -55,11 +55,30 @@ void SonicMeterAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
 
     // Peak calculation on raw (with gain) buffer
     float maxPeak = 0.0f;
-    for (int ch = 0; ch < totalNumInputChannels; ++ch) {
-        float peak = buffer.getMagnitude(ch, 0, buffer.getNumSamples());
-        if (peak > maxPeak) maxPeak = peak;
+    float dotProduct = 0.0f;
+    float magL = 0.0f;
+    float magR = 0.0f;
+
+    auto* channelL = buffer.getReadPointer(0);
+    auto* channelR = totalNumInputChannels > 1 ? buffer.getReadPointer(1) : channelL;
+
+    for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
+        float l = channelL[sample];
+        float r = channelR[sample];
+        
+        float absL = std::abs(l);
+        float absR = std::abs(r);
+        float currentMax = std::max(absL, absR);
+        if (currentMax > maxPeak) maxPeak = currentMax;
+
+        dotProduct += l * r;
+        magL += l * l;
+        magR += r * r;
     }
     
+    currentMeters.correlation = dotProduct / (std::sqrt(magL * magR) + 1e-10f);
+    currentMeters.stereoWidth = 1.0f - std::abs(currentMeters.correlation + 1.0f) * 0.5f;
+
     float peakDb = linearToDb(maxPeak);
     currentMeters.peak = peakDb;
     if (peakDb > currentMeters.peakMax) currentMeters.peakMax = peakDb;
