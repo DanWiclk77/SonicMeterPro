@@ -1,6 +1,13 @@
 # SonicMeter Pro - Platinum Edition
 Professional high-performance Loudness and Stereo Field Metering.
 
+## Version 1.8.1 "Platinum Pro Design"
+- **High-Fidelity UI Rewrite:** Modular layout with dedicated Analog, Analysis, and Transient panels.
+- **Improved VU Meter:** Fixed clipping of needle and scale numbering. Recalibrated for ivory-grade vintage response.
+- **Global Metrics Suite:** Added RMS Average, PLR (Peak to Loudness Ratio), and True Peak Current.
+- **Spectrum History scaling:** Added dB reference markers and color-graded glow fill.
+- **Reset Intelligence:** Added "Reset Stats" button to clear peak holds and Loudness accumulation in real-time.
+
 ## Version 1.8.0 "Platinum Optimization"
 - **ARM64 Silicon Mastery:** Full type-safety audit for Apple Silicon (M1/M2/M3) and modern x64 processors.
 - **Precision UI:** Technical technical UI rewrite using high-resolution geometry and carbon-fiber aesthetic.

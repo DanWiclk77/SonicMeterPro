@@ -46,12 +46,15 @@ public:
     {
         float peak = -100.0f;
         float peakMax = -100.0f;
+        float rms = -100.0f;
+        float rmsMax = -100.0f;
         float momentaryLufs = -100.0f;
         float momentaryMax = -100.0f;
         float shortTermLufs = -100.0f;
         float shortTermMax = -100.0f;
         float integratedLufs = -100.0f;
         float loudnessRange = 0.0f;
+        float plr = 0.0f;
         float vuValue = -20.0f;
         float history[200];
         int historyIdx = 0;

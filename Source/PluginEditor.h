@@ -27,6 +27,7 @@ private:
     
     juce::Slider gainSlider;
     juce::Label gainLabel;
+    juce::TextButton resetButton;
     
     // Internal Drawing Primitives
     void drawVUMeter (juce::Graphics& g, const juce::Rectangle<float> area, float value);

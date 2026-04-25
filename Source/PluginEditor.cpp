@@ -9,7 +9,7 @@ SonicMeterAudioProcessorEditor::SonicMeterAudioProcessorEditor (SonicMeterAudioP
     : AudioProcessorEditor (&p), processor (p)
 {
     // High-resolution UI dimensions
-    setSize (850, 500);
+    setSize (1000, 600);
     
     // Gain Slider - Technical Precision
     gainSlider.setSliderStyle(juce::Slider::RotaryVerticalDrag);
@@ -25,6 +25,11 @@ SonicMeterAudioProcessorEditor::SonicMeterAudioProcessorEditor (SonicMeterAudioP
     gainLabel.setFont(juce::Font(12.0f, juce::Font::bold));
     addAndMakeVisible(gainLabel);
 
+    // Reset Button
+    resetButton.setButtonText("RESET STATS");
+    resetButton.onClick = [this] { processor.resetStats(); };
+    addAndMakeVisible(resetButton);
+
     // High-precision UI sync
     startTimerHz(30); 
 }
@@ -39,66 +44,107 @@ void SonicMeterAudioProcessorEditor::paint (juce::Graphics& g)
     const SonicMeterAudioProcessor::Meters meters = processor.getMeters();
     
     // Background - Deep Carbon Finish
-    g.fillAll (juce::Colour::fromFloatRGBA (0.07f, 0.07f, 0.08f, 1.0f));
+    g.fillAll (juce::Colour::fromFloatRGBA (0.05f, 0.05f, 0.06f, 1.0f));
 
     const juce::Rectangle<float> fullBounds = getLocalBounds().toFloat();
-    juce::Rectangle<float> bounds = fullBounds.reduced(15.0f);
+    juce::Rectangle<float> bounds = fullBounds.reduced(20.0f);
     
     // Grid Accents (Background subtle pattern)
-    g.setColour(juce::Colours::white.withAlpha(0.03f));
-    for (float x = 0.0f; x < fullBounds.getWidth(); x += 50.0f)
+    g.setColour(juce::Colours::white.withAlpha(0.02f));
+    for (float x = 0.0f; x < fullBounds.getWidth(); x += 40.0f)
         g.drawVerticalLine((int)x, 0.0f, fullBounds.getHeight());
-    
-    // Layout - Left Control Section
-    auto leftSection = bounds.removeFromLeft(220.0f);
-    drawVUMeter(g, leftSection.removeFromTop(240.0f).reduced(5.0f), meters.vuValue);
-    
-    // Divider
-    g.setColour(juce::Colours::white.withAlpha(0.08f));
-    g.drawVerticalLine((int)bounds.getX(), bounds.getY(), bounds.getBottom());
+    for (float y = 0.0f; y < fullBounds.getHeight(); y += 40.0f)
+        g.drawHorizontalLine((int)y, 0.0f, fullBounds.getWidth());
 
-    // Layout - Center Analysis Section
-    bounds.removeFromLeft(15.0f);
-    auto centerSection = bounds.removeFromLeft(380.0f);
+    // Header Title
+    auto headerArea = bounds.removeFromTop(40.0f);
+    g.setColour(juce::Colours::white.withAlpha(0.6f));
+    g.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 14.0f, juce::Font::bold));
+    g.drawText("SONIC-METER PRO / PLATINUM EDITION", headerArea.withTrimmedRight(120), juce::Justification::centredLeft);
+
+    // --- LEFT COLUMN: ANALOG HERITAGE ---
+    auto leftColumn = bounds.removeFromLeft(300.0f);
     
-    // Container Shadow
-    g.setColour(juce::Colours::black.withAlpha(0.4f));
-    g.fillRoundedRectangle(centerSection.translated(2.0f, 2.0f), 8.0f);
+    // VU Meter Panel
+    auto vuPanel = leftColumn.removeFromTop(320.0f);
+    g.setColour(juce::Colours::black.withAlpha(0.3f));
+    g.fillRoundedRectangle(vuPanel, 6.0f);
+    g.setColour(juce::Colours::white.withAlpha(0.05f));
+    g.drawRoundedRectangle(vuPanel, 6.0f, 1.0f);
     
-    // Analysis Container
-    g.setColour(juce::Colour::fromFloatRGBA(0.03f, 0.03f, 0.04f, 1.0f));
-    g.fillRoundedRectangle(centerSection, 8.0f);
-    g.setColour(juce::Colours::white.withAlpha(0.1f));
-    g.drawRoundedRectangle(centerSection, 8.0f, 1.0f);
-    
-    auto contentArea = centerSection.reduced(15.0f);
-    auto headerArea = contentArea.removeFromTop(30.0f);
-    
-    g.setColour(juce::Colours::white.withAlpha(0.9f));
-    g.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 16.0f, juce::Font::bold));
-    g.drawText("SONIC SPECTRUM ANALYSIS", headerArea, juce::Justification::centred);
-    
-    contentArea.removeFromTop(10.0f);
-    drawHistoryGraph(g, contentArea.removeFromTop(160.0f), meters.history, meters.historyIdx);
-    
-    contentArea.removeFromTop(20.0f);
-    float digitalHeight = contentArea.getHeight() / 2.0f;
-    drawDigitalMeter(g, contentArea.removeFromTop(digitalHeight).reduced(5.0f), "INTEGRATED LUFS", meters.integratedLufs, juce::Colours::cyan);
-    drawDigitalMeter(g, contentArea.reduced(5.0f), "MOMENTARY LUFS", meters.momentaryLufs, juce::Colours::cyan.brighter(0.2f));
-    
-    // Layout - Right Metrics Section
-    bounds.removeFromLeft(15.0f);
-    auto rightSection = bounds;
-    
-    // Technical Markers
-    g.setColour(juce::Colours::white.withAlpha(0.5f));
+    auto vuContent = vuPanel.reduced(10.0f);
+    g.setColour(juce::Colours::white.withAlpha(0.4f));
     g.setFont(10.0f);
-    g.drawText("PANORAMIC / PHASE", rightSection.removeFromTop(20.0f), juce::Justification::centred);
-    drawCorrelationMeter(g, rightSection.removeFromTop(45.0f).reduced(2.0f), meters.correlation);
+    g.drawText("ANALOG HERITAGE", vuContent.removeFromTop(20), juce::Justification::left);
+    drawVUMeter(g, vuContent.removeFromTop(220).reduced(15), meters.vuValue);
     
-    rightSection.removeFromTop(25.0f);
-    drawDigitalMeter(g, rightSection.removeFromTop(110.0f).reduced(5.0f), "TRUE PEAK LEVEL", meters.peak, juce::Colours::red.withSaturation(0.8f));
-    drawDigitalMeter(g, rightSection.reduced(5.0f), "PEAK HOLD MAX", meters.peakMax, juce::Colours::orange.withSaturation(0.8f));
+    // Gain Section (is positioned by resized())
+
+    // --- CENTER COLUMN: LOUDNESS ANALYSIS ---
+    bounds.removeFromLeft(20.0f);
+    auto centerColumn = bounds.removeFromLeft(340.0f);
+    
+    // Analysis Panel
+    auto analysisPanel = centerColumn;
+    g.setColour(juce::Colours::black.withAlpha(0.3f));
+    g.fillRoundedRectangle(analysisPanel, 8.0f);
+    g.setColour(juce::Colours::white.withAlpha(0.05f));
+    g.drawRoundedRectangle(analysisPanel, 8.0f, 1.0f);
+    
+    auto analysisContent = analysisPanel.reduced(15.0f);
+    auto analysisHeader = analysisContent.removeFromTop(30.0f);
+    g.setColour(juce::Colours::cyan.withAlpha(0.8f));
+    g.setFont(juce::Font(14.0f, juce::Font::bold));
+    g.drawText("LOUDNESS ANALYSIS", analysisHeader, juce::Justification::centred);
+    
+    drawHistoryGraph(g, analysisContent.removeFromTop(140.0f), meters.history, meters.historyIdx);
+    
+    analysisContent.removeFromTop(15.0f);
+    drawDigitalMeter(g, analysisContent.removeFromTop(80.0f).reduced(2.0f), "INTEGRATED LOUDNESS", meters.integratedLufs, juce::Colours::cyan);
+    
+    auto miniGrid = analysisContent.reduced(2.0f);
+    float miniWidth = miniGrid.getWidth() / 2.0f;
+    auto row1 = miniGrid.removeFromTop(55.0f);
+    drawDigitalMeter(g, row1.removeFromLeft(miniWidth).reduced(2.0f), "SHORT TERM", meters.shortTermLufs, juce::Colours::cyan.withAlpha(0.8f));
+    drawDigitalMeter(g, row1.reduced(2.0f), "PLR INTEGRATED", meters.plr, juce::Colours::white.withAlpha(0.6f));
+    
+    auto row2 = miniGrid.reduced(2.0f);
+    drawDigitalMeter(g, row2.removeFromLeft(miniWidth).reduced(2.0f), "MOMENTARY", meters.momentaryLufs, juce::Colours::cyan.withAlpha(0.7f));
+    drawDigitalMeter(g, row2.reduced(2.0f), "MOMENTARY MAX", meters.momentaryMax, juce::Colours::white.withAlpha(0.5f));
+
+    // --- RIGHT COLUMN: TRANSIENT & FIELD ---
+    bounds.removeFromLeft(20.0f);
+    auto rightColumn = bounds;
+    
+    // Field Analysis
+    auto fieldPanel = rightColumn.removeFromTop(120.0f);
+    g.setColour(juce::Colours::black.withAlpha(0.3f));
+    g.fillRoundedRectangle(fieldPanel, 6.0f);
+    
+    auto fieldContent = fieldPanel.reduced(10.0f);
+    g.setColour(juce::Colours::cyan.withAlpha(0.6f));
+    g.setFont(10.0f);
+    g.drawText("FIELD ANALYSIS", fieldContent.removeFromTop(15.0f), juce::Justification::left);
+    drawCorrelationMeter(g, fieldContent.removeFromTop(45.0f).reduced(5.0f), meters.correlation);
+    
+    g.setColour(juce::Colours::white.withAlpha(0.3f));
+    g.setFont(10.0f);
+    g.drawText("STEREO WIDTH: " + juce::String((int)(meters.stereoWidth * 100)) + "%", fieldContent, juce::Justification::centred);
+
+    // Transient Check
+    rightColumn.removeFromTop(15.0f);
+    auto transientPanel = rightColumn;
+    g.setColour(juce::Colours::black.withAlpha(0.2f));
+    g.fillRoundedRectangle(transientPanel, 6.0f);
+    
+    auto transientContent = transientPanel.reduced(10.0f);
+    g.setColour(juce::Colours::red.withAlpha(0.7f));
+    g.setFont(10.0f);
+    g.drawText("TRANSIENT CHECK", transientContent.removeFromTop(15.0f), juce::Justification::left);
+    
+    drawDigitalMeter(g, transientContent.removeFromTop(90.0f).reduced(2.0f), "TRUE PEAK (CURRENT)", meters.peak, juce::Colours::red.withSaturation(0.7f));
+    drawDigitalMeter(g, transientContent.removeFromTop(90.0f).reduced(2.0f), "TRUE PEAK MAX", meters.peakMax, juce::Colours::orange.withSaturation(0.7f));
+    drawDigitalMeter(g, transientContent.reduced(2.0f), "RMS AVG", meters.rms, juce::Colours::white.withAlpha(0.8f));
 }
 
 void SonicMeterAudioProcessorEditor::drawCorrelationMeter(juce::Graphics& g, const juce::Rectangle<float> area, float value)
@@ -127,12 +173,21 @@ void SonicMeterAudioProcessorEditor::drawHistoryGraph(juce::Graphics& g, const j
     g.setColour(juce::Colours::black.darker());
     g.fillRoundedRectangle(area, 4.0f);
     
-    // Grid Lines
+    // Grid Lines and Labels
     g.setColour(juce::Colours::white.withAlpha(0.05f));
-    for (int db = -48; db <= 0; db += 12)
+    g.setFont(9.0f);
+    
+    float dbMarkers[] = { 0.0f, -6.0f, -12.0f, -18.0f, -24.0f, -36.0f, -48.0f };
+    for (float db : dbMarkers)
     {
-        float y = juce::jmap((float)db, -48.0f, 0.0f, area.getBottom(), area.getY());
+        float y = juce::jmap(db, -48.0f, 0.0f, area.getBottom(), area.getY());
         g.drawHorizontalLine((int)y, area.getX(), area.getRight());
+        
+        if (db == 0.0f || db == -18.0f || db == -48.0f) {
+            g.setColour(juce::Colours::white.withAlpha(0.2f));
+            g.drawText(juce::String((int)db), area.getX() + 2, (int)y - 10, 30, 20, juce::Justification::left);
+            g.setColour(juce::Colours::white.withAlpha(0.05f));
+        }
     }
 
     juce::Path p;
@@ -154,26 +209,38 @@ void SonicMeterAudioProcessorEditor::drawHistoryGraph(juce::Graphics& g, const j
         }
     }
     
-    // Glow effect
-    g.setColour(juce::Colours::cyan.withAlpha(0.3f));
-    g.strokePath(p, juce::PathStrokeType(3.0f));
+    // Fill under path
+    juce::Path fillP = p;
+    fillP.lineTo(area.getRight(), area.getBottom());
+    fillP.lineTo(area.getX(), area.getBottom());
+    fillP.closeSubPath();
+    
+    juce::ColourGradient grad(juce::Colours::cyan.withAlpha(0.15f), 0, area.getY(), 
+                             juce::Colours::transparentBlack, 0, area.getBottom(), false);
+    g.setGradientFill(grad);
+    g.fillPath(fillP);
+
+    // Glow effect stroke
+    g.setColour(juce::Colours::cyan.withAlpha(0.4f));
+    g.strokePath(p, juce::PathStrokeType(2.5f));
     g.setColour(juce::Colours::cyan);
-    g.strokePath(p, juce::PathStrokeType(1.2f));
+    g.strokePath(p, juce::PathStrokeType(1.0f));
 }
 
 void SonicMeterAudioProcessorEditor::drawDigitalMeter(juce::Graphics& g, const juce::Rectangle<float> area, const juce::String label, float value, juce::Colour color)
 {
-    g.setColour(juce::Colours::black.withAlpha(0.4f));
+    g.setColour(juce::Colours::black.withAlpha(0.2f));
     g.fillRoundedRectangle(area, 4.0f);
     
-    auto textBounds = area.reduced(10.0f, 5.0f);
+    auto textBounds = area.reduced(8.0f, 4.0f);
     
-    g.setColour(juce::Colours::white.withAlpha(0.4f));
-    g.setFont(juce::Font(10.0f, juce::Font::bold));
+    g.setColour(juce::Colours::white.withAlpha(0.3f));
+    g.setFont(juce::Font(9.0f, juce::Font::bold));
     g.drawText(label.toUpperCase(), textBounds.removeFromTop(12.0f), juce::Justification::left);
     
     g.setColour(color);
-    g.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 28.0f, juce::Font::bold));
+    float fontSize = area.getHeight() > 60 ? 32.0f : 24.0f;
+    g.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), fontSize, juce::Font::bold));
     
     const juce::String valStr = (value <= -70.0f) ? juce::String("-INF") : juce::String(value, 1);
     g.drawText(valStr, textBounds, juce::Justification::centredLeft);
@@ -181,66 +248,84 @@ void SonicMeterAudioProcessorEditor::drawDigitalMeter(juce::Graphics& g, const j
 
 void SonicMeterAudioProcessorEditor::drawVUMeter(juce::Graphics& g, const juce::Rectangle<float> area, float value)
 {
-    // Metal Bezel
+    // Metal Bezel (Outer)
     g.setColour(juce::Colours::grey.darker());
     g.drawRoundedRectangle(area, 6.0f, 2.0f);
     
-    auto plate = area.reduced(2.0f);
-    g.setColour(juce::Colour(0xfff0eee4)); // Ivory Grade
+    auto plate = area.reduced(4.0f);
+    
+    // Shadow inside bezel
+    g.setColour(juce::Colours::black.withAlpha(0.2f));
+    g.fillRoundedRectangle(plate.translated(1, 1), 6.0f);
+
+    g.setColour(juce::Colour(0xfff5f3eb)); // Ivory Grade (Slightly warmer)
     g.fillRoundedRectangle(plate, 6.0f);
     
     const float centerX = plate.getCentreX();
-    const float bottomY = plate.getBottom() + 10.0f;
-    const float radius = plate.getHeight() * 1.1f;
+    const float bottomY = plate.getBottom() + 15.0f; // Lower pivot for better scaling
+    const float radius = plate.getHeight() * 1.05f;
     
     // Scale Markings
-    g.setColour(juce::Colours::black.withAlpha(0.8f));
     for (int i = -20; i <= 3; i += 1)
     {
-        const float angle = juce::jmap((float)i, -20.0f, 3.0f, -0.7f, 0.7f);
+        const float angle = juce::jmap((float)i, -20.0f, 3.0f, -0.65f, 0.65f);
         const float angleRad = angle - juce::MathConstants<float>::halfPi;
         const float tickLen = (i % 5 == 0) ? 12.0f : 6.0f;
+        
         const juce::Point<float> pivot(centerX, bottomY);
         const juce::Point<float> p1 = pivot + juce::Point<float> (radius * std::cos (angleRad), radius * std::sin (angleRad));
         const juce::Point<float> p2 = pivot + juce::Point<float> ((radius - tickLen) * std::cos (angleRad), (radius - tickLen) * std::sin (angleRad));
         
-        g.drawLine(p1.getX(), p1.getY(), p2.getX(), p2.getY(), (i > 0) ? 2.5f : 1.5f);
-        
         if (i > 0) g.setColour(juce::Colours::red.darker());
         else g.setColour(juce::Colours::black.withAlpha(0.8f));
 
+        g.drawLine(p1.getX(), p1.getY(), p2.getX(), p2.getY(), (i >= 0) ? 2.5f : 1.2f);
+        
         if (i % 5 == 0 || i == 3) {
-            g.setFont(juce::Font(11.0f, juce::Font::bold));
-            const float textRadius = radius - 22.0f;
+            g.setFont(juce::Font(10.0f, juce::Font::bold));
+            const float textRadius = radius - 24.0f;
             const juce::Point<float> pT = pivot + juce::Point<float> (textRadius * std::cos (angleRad), textRadius * std::sin (angleRad));
             g.drawText(juce::String(i), juce::Rectangle<float>(pT.getX() - 15.0f, pT.getY() - 10.0f, 30.0f, 20.0f), juce::Justification::centred);
         }
     }
 
+    // VU Label
+    g.setColour(juce::Colours::black.withAlpha(0.4f));
+    g.setFont(juce::Font(14.0f, juce::Font::bold));
+    g.drawText("VU", plate.withTrimmedTop(plate.getHeight() * 0.6f), juce::Justification::centred);
+
     // Needle - Balanced Dynamics
-    const float clampedValue = juce::jlimit(-20.0f, 5.0f, value);
-    const float needleAngle = juce::jmap(clampedValue, -20.0f, 3.0f, -0.7f, 0.7f);
+    const float clampedValue = juce::jlimit(-20.0f, 4.5f, value);
+    const float needleAngle = juce::jmap(clampedValue, -20.0f, 3.0f, -0.65f, 0.65f);
     
     juce::Path needle;
-    needle.addRoundedRectangle(-1.2f, -radius * 0.92f, 2.4f, radius * 0.92f, 1.0f);
+    needle.addRoundedRectangle(-1.2f, -radius * 0.94f, 2.4f, radius * 0.94f, 1.0f);
     
-    g.setColour(juce::Colours::red.darker(0.2f));
+    g.setColour(juce::Colours::red.darker(0.3f));
     g.fillPath(needle, juce::AffineTransform::rotation(needleAngle).translated(centerX, bottomY));
     
     // Screw Head
     g.setColour(juce::Colours::black.brighter(0.1f));
-    g.fillEllipse(centerX - 6.0f, bottomY - plate.getHeight() * 0.1f, 12.0f, 12.0f);
+    g.fillEllipse(centerX - 8.0f, plate.getBottom() - 12.0f, 16.0f, 16.0f);
 }
 
 void SonicMeterAudioProcessorEditor::resized() 
 {
-    auto bounds = getLocalBounds().toFloat().reduced(15.0f);
-    auto leftArea = bounds.removeFromLeft(220.0f);
-    leftArea.removeFromTop(250.0f); // Top VU Reserved
+    const auto bounds = getLocalBounds();
     
-    auto controlArea = leftArea.reduced(25.0f, 10.0f);
-    gainLabel.setBounds(controlArea.removeFromTop(20).toNearestInt());
-    gainSlider.setBounds(controlArea.toNearestInt());
+    // Header for Reset Button
+    resetButton.setBounds(bounds.withTrimmedTop(10).withTrimmedRight(10).withHeight(25).withWidth(110));
+
+    // Layout helper
+    auto mainArea = bounds.reduced(20);
+    mainArea.removeFromTop(40); // Title skip
+    
+    auto leftArea = mainArea.removeFromLeft(300);
+    leftArea.removeFromTop(320); // VU Panel skip
+    
+    auto controlArea = leftArea.reduced(50, 20);
+    gainLabel.setBounds(controlArea.removeFromTop(20));
+    gainSlider.setBounds(controlArea);
 }
 
 void SonicMeterAudioProcessorEditor::timerCallback() 

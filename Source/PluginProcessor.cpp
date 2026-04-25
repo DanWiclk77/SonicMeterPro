@@ -93,9 +93,18 @@ void SonicMeterAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
     currentMeters.correlation = dotProduct / correlationDenom;
     currentMeters.stereoWidth = 1.0f - std::fabsf(currentMeters.correlation + 1.0f) * 0.5f;
 
+    // RMS Calculation
+    const float rmsVal = std::sqrtf((magL + magR) / (float)(2 * numSamples));
+    const float rmsDb = linearToDb(rmsVal);
+    currentMeters.rms = rmsDb;
+    if (rmsDb > currentMeters.rmsMax) currentMeters.rmsMax = rmsDb;
+
     const float peakDb = linearToDb(maxPeak);
     currentMeters.peak = peakDb;
     if (peakDb > currentMeters.peakMax) currentMeters.peakMax = peakDb;
+
+    // Update PLR
+    currentMeters.plr = currentMeters.peakMax - currentMeters.integratedLufs;
 }
 
 void SonicMeterAudioProcessor::updateLoudness(const juce::AudioBuffer<float>& buffer)
@@ -153,9 +162,13 @@ void SonicMeterAudioProcessor::resetStats()
 {
     const float infDb = -100.0f;
     currentMeters.peakMax = infDb;
+    currentMeters.peak = infDb;
+    currentMeters.rms = infDb;
+    currentMeters.rmsMax = infDb;
     currentMeters.momentaryMax = infDb;
     currentMeters.shortTermMax = infDb;
     currentMeters.integratedLufs = infDb;
+    currentMeters.plr = 0.0f;
     currentMeters.vuValue = -20.0f;
     
     integratedSum = 0.0;
