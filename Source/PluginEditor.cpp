@@ -93,16 +93,20 @@ void SonicMeterAudioProcessorEditor::paint (juce::Graphics& g)
     auto leftColumn = bounds.removeFromLeft(300.0f);
     
     // VU Meter Panel
-    auto vuPanel = leftColumn.removeFromTop(320.0f);
+    auto vuPanel = leftColumn.removeFromTop(340.0f); // Sync with resized()
     g.setColour(juce::Colours::black.withAlpha(0.3f));
     g.fillRoundedRectangle(vuPanel, 6.0f);
     g.setColour(juce::Colours::white.withAlpha(0.05f));
     g.drawRoundedRectangle(vuPanel, 6.0f, 1.0f);
     
     auto vuContent = vuPanel.reduced(10.0f);
+    auto vuLabelArea = vuContent.removeFromTop(20);
     g.setColour(juce::Colours::white.withAlpha(0.4f));
     g.setFont(10.0f);
-    g.drawText("ANALOG HERITAGE", vuContent.removeFromTop(20), juce::Justification::left);
+    g.drawText("ANALOG HERITAGE", vuLabelArea, juce::Justification::left);
+    
+    // Extra space below label
+    vuContent.removeFromTop(5);
     drawVUMeter(g, vuContent.removeFromTop(220).reduced(15), meters.vuValue);
     
     // Gain Section (is positioned by resized())
@@ -124,7 +128,7 @@ void SonicMeterAudioProcessorEditor::paint (juce::Graphics& g)
     g.setFont(juce::Font(14.0f, juce::Font::bold));
     g.drawText("LOUDNESS ANALYSIS", analysisHeader, juce::Justification::centred);
     
-    drawHistoryGraph(g, analysisContent.removeFromTop(140.0f), meters.history, meters.historyIdx);
+    drawHistoryGraph(g, analysisContent.removeFromTop(140.0f), meters);
     
     analysisContent.removeFromTop(15.0f);
     drawDigitalMeter(g, analysisContent.removeFromTop(80.0f).reduced(2.0f), "INTEGRATED LOUDNESS", meters.integratedLufs, juce::Colours::cyan);
@@ -133,11 +137,11 @@ void SonicMeterAudioProcessorEditor::paint (juce::Graphics& g)
     float miniWidth = miniGrid.getWidth() / 2.0f;
     auto row1 = miniGrid.removeFromTop(55.0f);
     drawDigitalMeter(g, row1.removeFromLeft(miniWidth).reduced(2.0f), "SHORT TERM", meters.shortTermLufs, juce::Colours::cyan.withAlpha(0.8f));
-    drawDigitalMeter(g, row1.reduced(2.0f), "PLR INTEGRATED", meters.plr, juce::Colours::white.withAlpha(0.6f));
+    drawDigitalMeter(g, row1.reduced(2.0f), "LRA (DYNAMICS)", meters.loudnessRange, juce::Colours::white.withAlpha(0.6f));
     
     auto row2 = miniGrid.reduced(2.0f);
     drawDigitalMeter(g, row2.removeFromLeft(miniWidth).reduced(2.0f), "MOMENTARY", meters.momentaryDisplay, juce::Colours::cyan.withAlpha(0.7f));
-    drawDigitalMeter(g, row2.reduced(2.0f), "MOMENTARY MAX", meters.momentaryMax, juce::Colours::white.withAlpha(0.5f));
+    drawDigitalMeter(g, row2.reduced(2.0f), "PLR (PEAK/LUFS)", meters.plr, juce::Colours::white.withAlpha(0.5f));
 
     // --- RIGHT COLUMN: TRANSIENT & FIELD ---
     bounds.removeFromLeft(20.0f);
@@ -195,11 +199,20 @@ void SonicMeterAudioProcessorEditor::drawCorrelationMeter(juce::Graphics& g, con
     g.fillEllipse(indicatorX - 3.0f, barArea.getCentreY() - 3.0f, 6.0f, 6.0f);
 }
 
-void SonicMeterAudioProcessorEditor::drawHistoryGraph(juce::Graphics& g, const juce::Rectangle<float> area, const float* history, int historyIdx)
+void SonicMeterAudioProcessorEditor::drawHistoryGraph(juce::Graphics& g, const juce::Rectangle<float> area, const SonicMeterAudioProcessor::Meters& meters)
 {
     g.setColour(juce::Colours::black.darker());
     g.fillRoundedRectangle(area, 4.0f);
     
+    // --- DRAW SPECTRUM BEHIND ---
+    g.setColour(juce::Colours::cyan.withAlpha(0.12f));
+    const float barWidth = area.getWidth() / 128.0f;
+    for (int i = 0; i < 128; ++i)
+    {
+        const float h = meters.spectrum[i] * area.getHeight();
+        g.fillRect(area.getX() + (i * barWidth), area.getBottom() - h, barWidth - 1.0f, h);
+    }
+
     // Grid Lines and Labels
     g.setColour(juce::Colours::white.withAlpha(0.05f));
     g.setFont(9.0f);
@@ -223,8 +236,8 @@ void SonicMeterAudioProcessorEditor::drawHistoryGraph(juce::Graphics& g, const j
     
     for (int i = 0; i < 200; ++i)
     {
-        const int idx = (historyIdx + i) % 200;
-        const float val = juce::jlimit(-48.0f, 0.0f, history[idx]);
+        const int idx = (meters.historyIdx + i) % 200;
+        const float val = juce::jlimit(-48.0f, 0.0f, meters.history[idx]);
         const float x = area.getX() + ((float)i * step);
         const float y = juce::jmap(val, -48.0f, 0.0f, area.getBottom(), area.getY());
         
@@ -251,7 +264,7 @@ void SonicMeterAudioProcessorEditor::drawHistoryGraph(juce::Graphics& g, const j
     g.setColour(juce::Colours::cyan.withAlpha(0.4f));
     g.strokePath(p, juce::PathStrokeType(2.5f));
     g.setColour(juce::Colours::cyan);
-    g.strokePath(p, juce::PathStrokeType(1.0f));
+    g.strokePath(p, juce::PathStrokeType(1.5f));
 }
 
 void SonicMeterAudioProcessorEditor::drawDigitalMeter(juce::Graphics& g, const juce::Rectangle<float> area, const juce::String label, float value, juce::Colour color)
@@ -283,13 +296,14 @@ void SonicMeterAudioProcessorEditor::drawDigitalMeter(juce::Graphics& g, const j
 
         if (target != 0.0f) {
             g.setColour(juce::Colours::white.withAlpha(0.2f));
-            g.drawText("TARGET: " + juce::String(target, 0) + " LUFS", textBounds, juce::Justification::centredRight);
+            g.setFont(juce::Font(10.0f));
+            g.drawText("TARGET: " + juce::String(target, 0) + " LUFS", area.withTrimmedRight(10), juce::Justification::bottomRight);
             
             // Visual diff indicator
             float diff = value - target;
             juce::Colour diffCol = std::abs(diff) < 1.0f ? juce::Colours::green : (diff > 0 ? juce::Colours::red : juce::Colours::orange);
             g.setColour(diffCol.withAlpha(0.6f));
-            g.drawHorizontalLine((int)(textBounds.getBottom() - 2), textBounds.getX(), textBounds.getX() + 40);
+            g.drawHorizontalLine((int)(area.getBottom() - 4), area.getX() + 10, area.getRight() - 10);
         }
     }
 }
@@ -362,23 +376,26 @@ void SonicMeterAudioProcessorEditor::resized()
     auto bounds = getLocalBounds();
     
     // Header Section - Fixed overlaps
-    auto header = bounds.removeFromTop(40);
-    resetButton.setBounds(header.removeFromLeft(140).reduced(10, 8));
-    presetSelector.setBounds(header.removeFromRight(180).reduced(10, 8));
+    auto header = bounds.removeFromTop(50); // More space for header
+    resetButton.setBounds(header.removeFromLeft(140).reduced(10, 10));
+    presetSelector.setBounds(header.removeFromRight(180).reduced(10, 10));
 
     // Layout helper
-    auto mainArea = bounds.reduced(20);
+    auto mainArea = bounds.reduced(20, 10);
     
     auto leftArea = mainArea.removeFromLeft(300);
-    auto vuSection = leftArea.removeFromTop(320);
+    auto vuSection = leftArea.removeFromTop(340);
     
-    // Calibration Slider positioning
-    auto calibArea = vuSection.removeFromTop(35).reduced(20, 0);
-    calibSlider.setBounds(calibArea.removeFromLeft(calibArea.getWidth() / 2).reduced(0, 5));
-    calibLabel.setBounds(calibArea.reduced(0, 5));
+    // Analog Panel layout
+    // The panel itself is drawn in paint() using the same top amount
+    
+    // Calibration Slider positioning (Bottom of VU panel)
+    auto calibArea = vuSection.removeFromBottom(40).reduced(20, 5);
+    calibSlider.setBounds(calibArea.withWidth(100));
+    calibLabel.setBounds(calibArea.withTrimmedLeft(105));
     
     // Gain / Trim Section
-    auto controlArea = leftArea.reduced(50, 10);
+    auto controlArea = leftArea.reduced(50, 5);
     gainLabel.setBounds(controlArea.removeFromTop(20));
     gainSlider.setBounds(controlArea);
 }

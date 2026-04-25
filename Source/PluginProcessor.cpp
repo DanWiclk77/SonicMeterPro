@@ -54,6 +54,41 @@ void SonicMeterAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
     // Apply User Input Gain Staging
     buffer.applyGain(gainFactor);
 
+    // LRA Update
+    updateLRA(buffer);
+
+    // FFT Analysis for Visualizer
+    for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
+    {
+        float input = buffer.getSample(0, sample);
+        fifo[fifoIndex++] = input;
+        
+        if (fifoIndex == 2048)
+        {
+            if (!nextFFTBlockReady)
+            {
+                std::fill(std::begin(fftData), std::end(fftData), 0.0f);
+                std::copy(std::begin(fifo), std::end(fifo), std::begin(fftData));
+                nextFFTBlockReady = true;
+            }
+            fifoIndex = 0;
+        }
+    }
+    
+    if (nextFFTBlockReady)
+    {
+        window.multiplyWithWindowingTable(fftData, 2048);
+        forwardFFT.performFrequencyOnlyForwardTransform(fftData);
+        
+        for (int i = 0; i < 128; ++i)
+        {
+            float val = std::log10(std::max(1e-7f, fftData[i])) * 20.0f;
+            float target = juce::jmap(val, -100.0f, 0.0f, 0.0f, 1.0f);
+            currentMeters.spectrum[i] += (target - currentMeters.spectrum[i]) * 0.1f;
+        }
+        nextFFTBlockReady = false;
+    }
+
     // Filter Scratch Buffer for R128 weighting
     juce::AudioBuffer<float> filteredBuffer;
     filteredBuffer.makeCopyOf(buffer);
@@ -112,7 +147,7 @@ void SonicMeterAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
         else current += (target - current) * speed; 
     };
 
-    float visualDecay = 0.03f; // Slower for numbers
+    float visualDecay = 0.008f; // Much slower for readable numbers (approx 0.5s integration)
     smooth(currentMeters.peakDisplay, currentMeters.peak, visualDecay);
     smooth(currentMeters.rmsDisplay, currentMeters.rms, visualDecay);
     smooth(currentMeters.momentaryDisplay, currentMeters.momentaryLufs, visualDecay);
@@ -171,6 +206,27 @@ void SonicMeterAudioProcessor::updateLoudness(const juce::AudioBuffer<float>& bu
     // History Tracking
     currentMeters.history[currentMeters.historyIdx] = mntLufs;
     currentMeters.historyIdx = (currentMeters.historyIdx + 1) % 200;
+}
+
+void SonicMeterAudioProcessor::updateLRA(const juce::AudioBuffer<float>& buffer)
+{
+    // Simplified R128 LRA Calculation (Percentiles 10-95)
+    float currentAbs = buffer.getMagnitude(0, buffer.getNumSamples());
+    if (currentAbs > 0.001f) // Gating to ignore silence
+    {
+        float db = 20.0f * std::log10(currentAbs);
+        lraHistory.push_back(db);
+        if (lraHistory.size() > maxLraPoints) lraHistory.erase(lraHistory.begin());
+        
+        if (lraHistory.size() > 100)
+        {
+            auto temp = lraHistory;
+            std::sort(temp.begin(), temp.end());
+            float p10 = temp[int(temp.size() * 0.1)];
+            float p95 = temp[int(temp.size() * 0.95)];
+            currentMeters.loudnessRange = p95 - p10;
+        }
+    }
 }
 
 void SonicMeterAudioProcessor::resetStats()

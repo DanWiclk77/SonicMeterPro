@@ -57,6 +57,8 @@ public:
         float plr = 0.0f;
         float vuValue = -20.0f;
         
+        float spectrum[128];
+        
         // Smoothed values for visual legibility (Slow Ballistics)
         float peakDisplay = -100.0f;
         float rmsDisplay = -100.0f;
@@ -71,6 +73,7 @@ public:
         Meters()
         {
             for (int i = 0; i < 200; ++i) history[i] = -70.0f;
+            for (int i = 0; i < 128; ++i) spectrum[i] = 0.0f;
         }
     };
 
@@ -110,17 +113,23 @@ private:
     std::vector<float> shortTermHistory;
     std::vector<double> accumulationBuffer;
     
-    float gainFactor = 1.0f;
-    float gainDb = 0.0f;
-    float vuCalibration = -18.0f;
-    StreamingPreset currentPreset = None;
+    juce::dsp::WindowingFunction<float> window { 2048, juce::dsp::WindowingFunction<float>::hann };
+    juce::dsp::FFT forwardFFT { 11 }; // 2048 points
+    float fifo[2048];
+    float fftData[4096];
+    int fifoIndex = 0;
+    bool nextFFTBlockReady = false;
+
+    float smoothingAlpha = 0.008f; 
     
-    float smoothingAlpha = 0.05f; // Fast but readable
-    
-    double integratedSum = 0.0;
+    // LRA Statistics
+    std::vector<float> lraHistory;
+    const int maxLraPoints = 2000; // ~20 seconds of data for stats
     long long integratedCount = 0;
 
     void updateLoudness (const juce::AudioBuffer<float>& buffer);
+    void updateLRA (const juce::AudioBuffer<float>& buffer);
+    float calculateCorrelation (const juce::AudioBuffer<float>& buffer);
     float linearToDb(float linear) { return linear > 0.00001f ? 20.0f * std::log10f(linear) : -100.0f; }
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SonicMeterAudioProcessor)

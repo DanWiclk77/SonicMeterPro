@@ -36,7 +36,7 @@ private:
     // Internal Drawing Primitives
     void drawVUMeter (juce::Graphics& g, const juce::Rectangle<float> area, float value);
     void drawDigitalMeter (juce::Graphics& g, const juce::Rectangle<float> area, const juce::String label, float value, juce::Colour color);
-    void drawHistoryGraph (juce::Graphics& g, const juce::Rectangle<float> area, const float* history, int historyIdx);
+    void drawHistoryGraph (juce::Graphics& g, const juce::Rectangle<float> area, const SonicMeterAudioProcessor::Meters& meters);
     void drawCorrelationMeter (juce::Graphics& g, const juce::Rectangle<float> area, float value);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SonicMeterAudioProcessorEditor)
