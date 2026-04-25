@@ -1,0 +1,6 @@
+{
+  "name": "Pro Master Metering Suite",
+  "description": "Professional-grade audio metering tool with LUFS, RMS, Peak, and calibrated VU meters for precision gain staging.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["audio_processing"]
+}
