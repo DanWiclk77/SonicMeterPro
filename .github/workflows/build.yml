@@ -48,11 +48,20 @@ jobs:
         if: runner.os == 'Windows'
 
       - name: Configure CMake (macOS)
-        run: cmake -B build -G Xcode
         if: runner.os == 'macOS'
+        run: |
+          cmake -B build -G Xcode \
+            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO \
+            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO \
+            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY=""
 
-      - name: Build
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
         run: cmake --build build --config Release --parallel 4
+
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
+        run: cmake --build build --config Release --target SonicMeterPro_All --parallel 4
 
       - name: Upload Artifacts (Windows)
         if: runner.os == 'Windows'
