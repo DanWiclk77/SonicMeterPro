@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.22)
 
 project(SonicMeterPro VERSION 1.8.0)
 
@@ -25,13 +25,44 @@ juce_add_plugin(SonicMeterPro
     FORMATS VST3 AU Standalone
     PRODUCT_NAME "SonicMeter Pro")
 
-if (APPLE)
+# 3. Configure Xcode to use dependency analysis for script phases
+# This fixes the "Run script build phase will be run during every build" warnings
+if(APPLE)
+    # Set architectures
     set_target_properties(SonicMeterPro PROPERTIES 
         OSX_ARCHITECTURES "arm64;x86_64"
     )
+    
+    # Enable dependency analysis for all build phases to avoid unnecessary re-runs
+    set_target_properties(SonicMeterPro PROPERTIES
+        XCODE_GENERATE_SCHEME ON
+    )
+    
+    # Configure JUCE helper targets if they exist
+    foreach(juce_target IN ITEMS ZERO_CHECK ALL_BUILD)
+        if(TARGET ${juce_target})
+            set_target_properties(${juce_target} PROPERTIES
+                XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym"
+            )
+        endif()
+    endforeach()
+    
+    # Apply dependency file build phase to plugin targets
+    foreach(plugin_target IN ITEMS SonicMeterPro_VST3 SonicMeterPro_AU SonicMeterPro_Standalone)
+        if(TARGET ${plugin_target})
+            # Use symbolic file input/output for CMake-generated schemes
+            set_target_properties(${plugin_target} PROPERTIES
+                XCODE_ATTRIBUTE_CONFIGURATION_BUILD_DIR "$(BUILD_DIR)/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)"
+            )
+        endif()
+    endforeach()
+    
+    # Global Xcode settings for proper dependency tracking
+    set(CMAKE_XCODE_GENERATE_SCHEME ON)
+    set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC ON)
 endif()
 
-# 3. Add Source files
+# 4. Add Source files
 target_sources(SonicMeterPro
     PRIVATE
         Source/PluginProcessor.cpp
@@ -39,7 +70,7 @@ target_sources(SonicMeterPro
         Source/PluginEditor.cpp
         Source/PluginEditor.h)
 
-# 4. Links and includes
+# 5. Links and includes
 target_compile_definitions(SonicMeterPro
     PUBLIC
         JUCE_WEB_BROWSER=0
