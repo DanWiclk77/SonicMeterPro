@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { useAudioProcessor } from './hooks/useAudioProcessor';
 import { VUMeter } from './components/VUMeter';
 import { DigitalMeter } from './components/DigitalMeter';
+import { HistoryGraph } from './components/HistoryGraph';
 import { 
   Play, 
   Square, 
@@ -181,6 +182,11 @@ export default function App() {
                 <h2 className="text-[11px] uppercase tracking-[0.25em] text-zinc-400 font-bold">Loudness Analysis</h2>
               </div>
               <span className="text-[9px] font-mono text-zinc-600 tracking-widest border border-zinc-800 px-2 py-0.5 rounded">EBU R128</span>
+            </div>
+            
+            {/* Real-time History Graph */}
+            <div className="mb-8">
+               <HistoryGraph data={metrics.history} integrated={metrics.integratedLufs} />
             </div>
             
             <div className="flex-1 grid grid-cols-2 gap-8">

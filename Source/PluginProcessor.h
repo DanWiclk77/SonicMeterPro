@@ -43,6 +43,8 @@ public:
         float integratedLufs = -100.0f;
         float loudnessRange = 0.0f;
         float vuValue = -20.0f;
+        float history[200] = { -70.0f };
+        int historyIdx = 0;
     };
 
     Meters getMeters() const { return currentMeters; }

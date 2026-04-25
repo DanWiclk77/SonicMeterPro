@@ -31,6 +31,8 @@ void SonicMeterAudioProcessorEditor::paint (juce::Graphics& g)
     g.setFont(20.0f);
     g.drawText("LOUDNESS", center.removeFromTop(40), juce::Justification::centred);
     
+    drawHistoryGraph(g, center.removeFromTop(120).reduced(10), meters.history, meters.historyIdx);
+    
     drawDigitalMeter(g, center.removeFromTop(80).reduced(10), "INTEGRATED", meters.integratedLufs, juce::Colours::cyan);
     drawDigitalMeter(g, center.removeFromTop(80).reduced(10), "SHORT TERM", meters.shortTermLufs, juce::Colours::cyan);
     
@@ -38,6 +40,29 @@ void SonicMeterAudioProcessorEditor::paint (juce::Graphics& g)
     auto right = bounds.reduced(10);
     drawDigitalMeter(g, right.removeFromTop(80).reduced(5), "TRUE PEAK", meters.peak, juce::Colours::red);
     drawDigitalMeter(g, right.removeFromTop(80).reduced(5), "PEAK MAX", meters.peakMax, juce::Colours::orange);
+}
+
+void SonicMeterAudioProcessorEditor::drawHistoryGraph(juce::Graphics& g, juce::Rectangle<float> area, const float* history, int historyIdx)
+{
+    g.setColour(juce::Colours::black);
+    g.fillRoundedRectangle(area, 4.0f);
+    
+    g.setColour(juce::Colours::cyan.withAlpha(0.2f));
+    juce::Path p;
+    float step = area.getWidth() / 200.0f;
+    
+    for (int i = 0; i < 200; ++i)
+    {
+        int idx = (historyIdx + i) % 200;
+        float val = juce::jlimit(-48.0f, 0.0f, history[idx]);
+        float y = juce::jmap(val, -48.0f, 0.0f, area.getBottom(), area.getY());
+        
+        if (i == 0) p.startNewSubPath(area.getX(), y);
+        else p.lineTo(area.getX() + (i * step), y);
+    }
+    
+    g.setColour(juce::Colours::cyan);
+    g.strokePath(p, juce::PathStrokeType(1.5f));
 }
 
 void SonicMeterAudioProcessorEditor::drawDigitalMeter(juce::Graphics& g, juce::Rectangle<float> area, juce::String label, float value, juce::Colour color)

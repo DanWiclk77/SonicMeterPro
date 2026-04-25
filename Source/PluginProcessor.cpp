@@ -83,6 +83,10 @@ void SonicMeterAudioProcessor::updateLoudness(const juce::AudioBuffer<float>& bu
     currentMeters.momentaryLufs = mntLufs;
     if (mntLufs > currentMeters.momentaryMax) currentMeters.momentaryMax = mntLufs;
     
+    // Update history for graph (using momentary for fast response here)
+    currentMeters.history[currentMeters.historyIdx] = mntLufs;
+    currentMeters.historyIdx = (currentMeters.historyIdx + 1) % 200;
+    
     // Accumulate for Integrated and Short Term logic here...
     // In a real VST, we use sliding windows and histograms for LRA.
 }

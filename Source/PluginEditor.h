@@ -22,6 +22,7 @@ private:
     
     void drawVUMeter (juce::Graphics& g, juce::Rectangle<float> area, float value);
     void drawDigitalMeter (juce::Graphics& g, juce::Rectangle<float> area, juce::String label, float value, juce::Colour color);
+    void drawHistoryGraph (juce::Graphics& g, juce::Rectangle<float> area, const float* history, int historyIdx);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SonicMeterAudioProcessorEditor)
 };

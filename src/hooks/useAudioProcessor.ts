@@ -13,6 +13,7 @@ export interface MeterData {
   plrShortTerm: number;
   plrIntegrated: number;
   vu: number;
+  history: number[]; // Array of short-term LUFS values for graphing
 }
 
 export function useAudioProcessor() {
@@ -31,7 +32,8 @@ export function useAudioProcessor() {
     loudnessRange: 0,
     plrShortTerm: 0,
     plrIntegrated: 0,
-    vu: -20
+    vu: -20,
+    history: new Array(100).fill(-70)
   });
 
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -156,6 +158,10 @@ export function useAudioProcessor() {
       setMetrics(prev => {
         const targetVu = peakDb - vuCalibration;
         const vu = prev.vu + (targetVu - prev.vu) * 0.1;
+
+        // Update graphical history (keep last 100 points)
+        const updatedHistory = [...prev.history, stLufs];
+        if (updatedHistory.length > 200) updatedHistory.shift();
         
         return {
           peak: peakDb,
@@ -169,7 +175,8 @@ export function useAudioProcessor() {
           loudnessRange: lra,
           plrShortTerm: peakDb - stLufs,
           plrIntegrated: peakMaxRef.current - intLufs,
-          vu: Math.max(-20, Math.min(3, vu))
+          vu: Math.max(-20, Math.min(3, vu)),
+          history: updatedHistory
         };
       });
 
