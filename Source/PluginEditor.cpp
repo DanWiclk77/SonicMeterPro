@@ -115,29 +115,32 @@ void SonicMeterAudioProcessorEditor::drawVUMeter(juce::Graphics& g, juce::Rectan
     
     for (int i = -20; i <= 3; i += 2)
     {
-        float angle = juce::jmap((float)i, -20.0f, 3.0f, -0.8f, 0.8f);
-        auto p1 = juce::Point<float>(centerX, bottomY).getPointOnLine(radius, angle - juce::MathConstants<float>::halfPi);
-        auto p2 = juce::Point<float>(centerX, bottomY).getPointOnLine(radius - 10, angle - juce::MathConstants<float>::halfPi);
+        float scaleAngle = juce::jmap((float)i, -20.0f, 3.0f, -0.8f, 0.8f);
+        const juce::Point<float> p1 = juce::Point<float>(centerX, bottomY).getPointOnLine(radius, scaleAngle - juce::MathConstants<float>::halfPi);
+        const juce::Point<float> p2 = juce::Point<float>(centerX, bottomY).getPointOnLine(radius - 10.0f, scaleAngle - juce::MathConstants<float>::halfPi);
         g.drawLine(p1.x, p1.y, p2.x, p2.y, 2.0f);
         
         if (i % 4 == 0 || i == 0 || i == 3) {
             g.setFont(12.0f);
-            auto pText = juce::Point<float>(centerX, bottomY).getPointOnLine(radius - 25, angle - juce::MathConstants<float>::halfPi);
-            g.drawText(juce::String(i), juce::Rectangle<float>(pText.x - 15, pText.y - 10, 30, 20), juce::Justification::centred, false);
+            const juce::Point<float> pPivot(centerX, bottomY);
+            const juce::Point<float> pText = pPivot.getPointOnLine(radius - 20.0f, scaleAngle - juce::MathConstants<float>::halfPi);
+            g.drawText(juce::String(i), juce::Rectangle<float>(pText.x - 15.0f, pText.y - 10.0f, 30.0f, 20.0f), juce::Justification::centred, false);
         }
     }
 
     // Needle
-    float angle = juce::jmap(juce::jlimit(-20.0f, 6.0f, value), -20.0f, 3.0f, -0.8f, 0.8f);
+    float clampedValue = juce::jlimit(-20.0f, 6.0f, value);
+    float angle = juce::jmap(clampedValue, -20.0f, 3.0f, -0.8f, 0.8f);
+    
     juce::Path needle;
-    needle.addRectangle(-1.5f, -radius, 3.0f, radius);
+    needle.addRectangle(-1.0f, -radius * 0.95f, 2.0f, radius * 0.95f);
     
     g.setColour(juce::Colours::red.darker());
     g.fillPath(needle, juce::AffineTransform::rotation(angle).translated(centerX, bottomY));
     
     // Pivot cap
     g.setColour(juce::Colours::black);
-    g.fillEllipse(centerX - 10, bottomY - 10, 20, 20);
+    g.fillEllipse(centerX - 8.0f, bottomY - 8.0f, 16.0f, 16.0f);
 }
 
 void SonicMeterAudioProcessorEditor::resized() {}

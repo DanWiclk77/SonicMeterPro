@@ -3,11 +3,11 @@
 Professional Loudness and Stereo Field Metering Plugin.
 Built with JUCE and C++.
 
-## Versión 1.6.1 "Interface Pro Fix"
-- **Corrección de Compilación:** Corregido error en `drawText` que impedía la generación del binario en Windows/Mac.
-- **Precisión DSP:** Implementación completa de la cadena de filtrado K-Weighting (Pre-filter + K-filter) según EBU R128.
-- **Funcionalidad de Reset:** Ahora puedes hacer clic en cualquier parte de la interfaz para reiniciar las estadísticas de medición.
-- **Estabilidad de Integrated LUFS:** Corregida la inicialización de buffers de acumulación para evitar valores erróneos al inicio.
+## Versión 1.6.2 "Precision Core"
+- **Correcciones Críticas (MSVC):** Eliminación de ambigüedades en tipos `auto` y `juce::Point` para asegurar la compilación en Windows.
+- **Renderizado de Fuente:** Asegurada la compatibilidad de `drawText` con rectángulos flotantes.
+- **Ajuste de Escala VU:** Calibración refinada del arco de medición y etiquetas.
+- **Estabilidad de Compilación:** Refinamiento de la lógica de punteros de audio para evitar errores de conversión en Mac.
 
 ## Características
 - **EBU R128 Compliant:** Integrated, Short-Term, and Momentary LUFS.
