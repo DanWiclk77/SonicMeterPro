@@ -3,7 +3,12 @@
 Professional Loudness and Stereo Field Metering Plugin.
 Built with JUCE and C++.
 
-## Features
+## Versión 1.5.0 "Vanguard"
+- **Actualización de Compilación:** Ahora utiliza inclusión modular directa (más estable en GitHub Actions).
+- **Correcciones:** Eliminado el error de `JuceHeader.h` no encontrado.
+- **Sincronización:** Si tienes problemas para sincronizar con GitHub, asegúrate de hacer un `git pull --rebase` antes de intentar confirmar los cambios.
+
+## Características
 - **EBU R128 Compliant:** Integrated, Short-Term, and Momentary LUFS.
 - **True Peak Metering:** Accurate peak detection.
 - **Stereo Analysis:** Correlation meter and width estimation.

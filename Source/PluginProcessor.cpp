@@ -1,5 +1,4 @@
 /* SonicMeter Pro - Advanced Loudness Metering Core */
-#include <JuceHeader.h>
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 

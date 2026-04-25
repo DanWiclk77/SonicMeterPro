@@ -25,9 +25,6 @@ juce_add_plugin(SonicMeterPro
     FORMATS VST3 AU Standalone
     PRODUCT_NAME "SonicMeter Pro")
 
-# CRÍTICO: Generar JuceHeader.h para que los archivos .cpp lo encuentren
-juce_generate_juce_header(SonicMeterPro)
-
 # 3. Add Source files
 target_sources(SonicMeterPro
     PRIVATE
