@@ -198,11 +198,11 @@ void SonicMeterAudioProcessorEditor::drawVUMeter(juce::Graphics& g, const juce::
     for (int i = -20; i <= 3; i += 1)
     {
         const float angle = juce::jmap((float)i, -20.0f, 3.0f, -0.7f, 0.7f);
+        const float angleRad = angle - juce::MathConstants<float>::halfPi;
         const float tickLen = (i % 5 == 0) ? 12.0f : 6.0f;
-        
         const juce::Point<float> pivot(centerX, bottomY);
-        const juce::Point<float> p1 = pivot.getPointOnLine(radius, angle - juce::MathConstants<float>::halfPi);
-        const juce::Point<float> p2 = pivot.getPointOnLine(radius - tickLen, angle - juce::MathConstants<float>::halfPi);
+        const juce::Point<float> p1 = pivot + juce::Point<float> (radius * std::cos (angleRad), radius * std::sin (angleRad));
+        const juce::Point<float> p2 = pivot + juce::Point<float> ((radius - tickLen) * std::cos (angleRad), (radius - tickLen) * std::sin (angleRad));
         
         g.drawLine(p1.getX(), p1.getY(), p2.getX(), p2.getY(), (i > 0) ? 2.5f : 1.5f);
         
@@ -211,7 +211,8 @@ void SonicMeterAudioProcessorEditor::drawVUMeter(juce::Graphics& g, const juce::
 
         if (i % 5 == 0 || i == 3) {
             g.setFont(juce::Font(11.0f, juce::Font::bold));
-            const juce::Point<float> pT = pivot.getPointOnLine(radius - 22.0f, angle - juce::MathConstants<float>::halfPi);
+            const float textRadius = radius - 22.0f;
+            const juce::Point<float> pT = pivot + juce::Point<float> (textRadius * std::cos (angleRad), textRadius * std::sin (angleRad));
             g.drawText(juce::String(i), juce::Rectangle<float>(pT.getX() - 15.0f, pT.getY() - 10.0f, 30.0f, 20.0f), juce::Justification::centred);
         }
     }
@@ -233,7 +234,7 @@ void SonicMeterAudioProcessorEditor::drawVUMeter(juce::Graphics& g, const juce::
 
 void SonicMeterAudioProcessorEditor::resized() 
 {
-    const auto bounds = getLocalBounds().toFloat().reduced(15.0f);
+    auto bounds = getLocalBounds().toFloat().reduced(15.0f);
     auto leftArea = bounds.removeFromLeft(220.0f);
     leftArea.removeFromTop(250.0f); // Top VU Reserved
     
