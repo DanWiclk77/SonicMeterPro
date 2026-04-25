@@ -1,7 +1,7 @@
 {
   "name": "sonicmeter-pro",
   "private": true,
-  "version": "1.6.2",
+  "version": "1.7.0",
   "description": "Professional Loudness Metering Plugin - Vanguard Edition",
   "type": "module",
   "scripts": {

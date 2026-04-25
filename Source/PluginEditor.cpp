@@ -7,8 +7,22 @@ using namespace juce;
 SonicMeterAudioProcessorEditor::SonicMeterAudioProcessorEditor (SonicMeterAudioProcessor& p)
     : AudioProcessorEditor (&p), processor (p)
 {
-    setSize (800, 500);
-    startTimerHz(30); // 30 FPS UI refresh
+    setSize (850, 500);
+    
+    // Gain Slider Configuration
+    gainSlider.setSliderStyle(juce::Slider::RotaryVerticalDrag);
+    gainSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
+    gainSlider.setRange(0.0, 2.0, 0.01);
+    gainSlider.setValue(processor.getGain());
+    gainSlider.onValueChange = [this] { processor.setGain((float)gainSlider.getValue()); };
+    addAndMakeVisible(gainSlider);
+    
+    gainLabel.setText("INPUT GAIN", juce::dontSendNotification);
+    gainLabel.setJustificationType(juce::Justification::centred);
+    gainLabel.setFont(12.0f);
+    addAndMakeVisible(gainLabel);
+
+    startTimerHz(30); 
 }
 
 SonicMeterAudioProcessorEditor::~SonicMeterAudioProcessorEditor() {}
@@ -17,34 +31,55 @@ void SonicMeterAudioProcessorEditor::paint (juce::Graphics& g)
 {
     auto meters = processor.getMeters();
     
-    // Background
-    g.fillAll (juce::Colour::fromFloatRGBA (0.05f, 0.05f, 0.05f, 1.0f));
+    // Background - Dark technical finish
+    g.fillAll (juce::Colour::fromFloatRGBA (0.08f, 0.08f, 0.1f, 1.0f));
 
-    auto bounds = getLocalBounds().toFloat();
+    const juce::Rectangle<float> fullBounds = getLocalBounds().toFloat();
+    auto bounds = fullBounds.reduced(10);
     
-    // Draw VU Meter
-    drawVUMeter(g, bounds.removeFromLeft(bounds.getWidth() * 0.4f).reduced(20), meters.vuValue);
+    // Left Section: VU Meter + Gain
+    auto leftSection = bounds.removeFromLeft(220.0f);
     
-    // Middle Section: Loudness
-    auto center = bounds.removeFromLeft(bounds.getWidth() * 0.6f).reduced(10);
-    g.setColour(juce::Colours::darkgrey.darker());
-    g.fillRoundedRectangle(center, 10.0f);
+    // VU Meter at top
+    drawVUMeter(g, leftSection.removeFromTop(200.0f).reduced(5), meters.vuValue);
     
-    g.setColour(juce::Colours::cyan);
-    g.setFont(20.0f);
-    g.drawText("LOUDNESS", center.removeFromTop(40), juce::Justification::centred);
+    // Gain control below VU
+    auto gainArea = leftSection.reduced(30, 20);
+    gainLabel.setBounds(gainArea.removeFromTop(20).toNearestInt());
+    gainSlider.setBounds(gainArea.toNearestInt());
     
-    drawHistoryGraph(g, center.removeFromTop(120).reduced(10), meters.history, meters.historyIdx);
+    // Divider
+    g.setColour(juce::Colours::white.withAlpha(0.1f));
+    g.drawVerticalLine(bounds.getX() - 5, bounds.getY() + 10, bounds.getBottom() - 10);
+
+    // Middle Section: Loudness Stats
+    auto centerSection = bounds.removeFromLeft(380.0f).reduced(10);
+    g.setColour(juce::Colour::fromFloatRGBA(0.04f, 0.04f, 0.05f, 1.0f));
+    g.fillRoundedRectangle(centerSection, 6.0f);
     
-    drawDigitalMeter(g, center.removeFromTop(80).reduced(10), "INTEGRATED", meters.integratedLufs, juce::Colours::cyan);
-    drawDigitalMeter(g, center.removeFromTop(80).reduced(10), "SHORT TERM", meters.shortTermLufs, juce::Colours::cyan);
+    auto headerArea = centerSection.removeFromTop(40);
+    g.setColour(juce::Colours::white.withAlpha(0.8f));
+    g.setFont(juce::Font("monospace", 18.0f, juce::Font::bold));
+    g.drawText("LOUDNESS ANALYSIS", headerArea, juce::Justification::centred);
+    
+    drawHistoryGraph(g, centerSection.removeFromTop(140).reduced(10), meters.history, meters.historyIdx);
+    
+    auto metersGrid = centerSection.reduced(10);
+    float rowHeight = metersGrid.getHeight() / 2.0f;
+    drawDigitalMeter(g, metersGrid.removeFromTop(rowHeight).reduced(5), "INTEGRATED (LUFS)", meters.integratedLufs, juce::Colours::cyan);
+    drawDigitalMeter(g, metersGrid.reduced(5), "SHORT TERM (LUFS)", meters.shortTermLufs, juce::Colours::cyan);
     
     // Right Section: Peaks & Analysis
-    auto right = bounds.reduced(10);
-    drawCorrelationMeter(g, right.removeFromTop(40).reduced(5), meters.correlation);
-    right.removeFromTop(10);
-    drawDigitalMeter(g, right.removeFromTop(80).reduced(5), "TRUE PEAK", meters.peak, juce::Colours::red);
-    drawDigitalMeter(g, right.removeFromTop(80).reduced(5), "PEAK MAX", meters.peakMax, juce::Colours::orange);
+    auto rightSection = bounds.reduced(10);
+    
+    g.setColour(juce::Colours::white.withAlpha(0.6f));
+    g.setFont(12.0f);
+    g.drawText("PHASE / STEREO", rightSection.removeFromTop(20), juce::Justification::centred);
+    drawCorrelationMeter(g, rightSection.removeFromTop(40).reduced(5), meters.correlation);
+    
+    rightSection.removeFromTop(20);
+    drawDigitalMeter(g, rightSection.removeFromTop(100).reduced(5), "TRUE PEAK", meters.peak, juce::Colours::red);
+    drawDigitalMeter(g, rightSection.reduced(5), "PEAK MAX", meters.peakMax, juce::Colours::orange);
 }
 
 void SonicMeterAudioProcessorEditor::drawCorrelationMeter(juce::Graphics& g, juce::Rectangle<float> area, float value)

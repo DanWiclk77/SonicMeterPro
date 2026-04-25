@@ -3,6 +3,13 @@
 Professional Loudness and Stereo Field Metering Plugin.
 Built with JUCE and C++.
 
+## Versión 1.7.0 "Vanguard Professional"
+- **Rediseño de Interfaz:** Nuevo layout bento-grid con panel de control de ganancia integrado y visualización técnica mejorada.
+- **Gain Staging Pro:** Añadido control de ganancia de entrada para calibración precisa antes de la medición.
+- **Robustez Multi-Plataforma:** Implementación definitiva de tipos explícitos para eliminar ambigüedades en compiladores MSVC y Clang.
+- **Optimización de Renderizado:** Uso extensivo de `AffineTransform` y primitivas de dibujo de punto flotante para mayor nitidez y compatibilidad.
+- **Entorno de Compilación:** Configuración estable con Java 25 y Node 24 para CI/CD sin avisos de deprecación.
+
 ## Versión 1.6.2 "Precision Core"
 - **Correcciones Críticas (MSVC):** Eliminación de ambigüedades en tipos `auto` y `juce::Point` para asegurar la compilación en Windows.
 - **Entorno de Compilación:** Actualizado a **Java 25** y **Node.js 24** en GitHub Actions para asegurar compatibilidad y evitar avisos de deprecación.

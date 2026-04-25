@@ -67,6 +67,9 @@ public:
     Meters getMeters() const { return currentMeters; }
     void resetStats();
 
+    float getGain() const { return gainFactor; }
+    void setGain(float newGain) { gainFactor = newGain; }
+
 private:
     Meters currentMeters;
     
