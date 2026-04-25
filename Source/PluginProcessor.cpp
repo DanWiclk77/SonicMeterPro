@@ -93,24 +93,41 @@ void SonicMeterAudioProcessor::updateLoudness(const juce::AudioBuffer<float>& bu
     float sumSq = 0.0f;
     
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
+        auto* channelData = buffer.getReadPointer(ch);
         for (int s = 0; s < numSamples; ++s) {
-            float val = buffer.getSample(ch, s);
+            float val = channelData[s];
             sumSq += val * val;
         }
     }
     
-    float meanSq = sumSq / (float)(numSamples * buffer.getNumChannels());
+    float meanSq = sumSq / (float)(numSamples * std::max(1, buffer.getNumChannels()));
     float mntLufs = 10.0f * std::log10(meanSq + 1e-10f) + 0.69f; // K-weighting offset
     
     currentMeters.momentaryLufs = mntLufs;
+    
+    // VU calculation (slow decay)
+    float targetVu = juce::jlimit(-20.0f, 3.0f, mntLufs + 18.0f);
+    if (targetVu > currentMeters.vuValue) 
+        currentMeters.vuValue = targetVu;
+    else 
+        currentMeters.vuValue += (targetVu - currentMeters.vuValue) * 0.05f;
+
     if (mntLufs > currentMeters.momentaryMax) currentMeters.momentaryMax = mntLufs;
     
-    // Update history for graph (using momentary for fast response here)
+    // Simple averaging for Short Term and Integrated for now
+    integratedSum += meanSq;
+    integratedCount++;
+    
+    if (integratedCount > 0) {
+        float avgMeanSq = integratedSum / (float)integratedCount;
+        currentMeters.integratedLufs = 10.0f * std::log10(avgMeanSq + 1e-10f) + 0.69f;
+    }
+    
+    currentMeters.shortTermLufs = mntLufs; // Simulated short term
+    
+    // Update history for graph
     currentMeters.history[currentMeters.historyIdx] = mntLufs;
     currentMeters.historyIdx = (currentMeters.historyIdx + 1) % 200;
-    
-    // Accumulate for Integrated and Short Term logic here...
-    // In a real VST, we use sliding windows and histograms for LRA.
 }
 
 void SonicMeterAudioProcessor::resetStats()

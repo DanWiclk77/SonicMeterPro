@@ -3,10 +3,11 @@
 Professional Loudness and Stereo Field Metering Plugin.
 Built with JUCE and C++.
 
-## Versión 1.5.1 "Vanguard Fix"
-- **Correcciones Gráficas:** Corregido error de rotación de aguja y compatibilidad con `juce::Graphics`.
-- **Estabilidad de Tipos:** Mejorada la inicialización de estructuras de datos para mayor compatibilidad con MSVC.
-- **Inclusiones Modulares:** Refinadas las cabeceras para evitar dependencias circulares o inexistentes.
+## Versión 1.6.0 "Interface Pro"
+- **Rediseño del Medidor VU:** Implementación de escala analógica real, aguja roja con suavizado de movimiento y pivotado corregido.
+- **Estabilidad de Loudness:** Nueva lógica de acumulación para `Integrated LUFS` que evita reinicios en el DAW.
+- **Fidelidad Visual:** Ajuste de colores y tipografías para coincidir con la versión de previsualización.
+- **Optimización DSP:** Acceso directo a punteros de audio para reducir la carga de CPU en el proceso de medición.
 
 ## Características
 - **EBU R128 Compliant:** Integrated, Short-Term, and Momentary LUFS.

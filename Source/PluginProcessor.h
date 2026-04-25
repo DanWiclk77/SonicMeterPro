@@ -80,6 +80,9 @@ private:
     
     float gainFactor = 1.0f;
     float vuCalibration = -18.0f;
+    
+    double integratedSum = 0.0;
+    long long integratedCount = 0;
 
     void updateLoudness (const juce::AudioBuffer<float>& buffer);
     float linearToDb(float linear) { return linear > 0.00001f ? 20.0f * std::log10(linear) : -100.0f; }
