@@ -148,7 +148,7 @@ void SonicMeterAudioProcessorEditor::drawVUMeter(juce::Graphics& g, juce::Rectan
         float scaleAngle = juce::jmap((float)i, -20.0f, 3.0f, -0.8f, 0.8f);
         const juce::Point<float> p1 = juce::Point<float>(centerX, bottomY).getPointOnLine(radius, scaleAngle - juce::MathConstants<float>::halfPi);
         const juce::Point<float> p2 = juce::Point<float>(centerX, bottomY).getPointOnLine(radius - 10.0f, scaleAngle - juce::MathConstants<float>::halfPi);
-        g.drawLine(p1.x, p1.y, p2.x, p2.y, 2.0f);
+        g.drawLine(p1.getX(), p1.getY(), p2.getX(), p2.getY(), 2.0f);
         
         if (i % 4 == 0 || i == 0 || i == 3) {
             g.setFont(12.0f);
@@ -165,7 +165,7 @@ void SonicMeterAudioProcessorEditor::drawVUMeter(juce::Graphics& g, juce::Rectan
     needle.addRectangle(-1.0f, -radius * 0.95f, 2.0f, radius * 0.95f);
     
     g.setColour(juce::Colours::red.darker());
-    g.fillPath(needle, juce::AffineTransform::rotation(angle).translated(centerX, bottomY));
+    g.fillPath(needle, juce::AffineTransform::rotation(angle).translated(juce::Point<float>(centerX, bottomY)));
     
     // Pivot cap
     g.setColour(juce::Colours::black);
